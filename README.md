@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/FleetwoodJ/eWheel/releases/latest/download/eWheel-1.0.0.dmg"><b>⬇ Download eWheel 1.0.0 (.dmg, 1.4 MB)</b></a>
+  <a href="https://github.com/FleetwoodJ/eWheel/releases/latest/download/eWheel.dmg"><b>⬇ Download eWheel (.dmg, 1.5 MB)</b></a>
   &nbsp;·&nbsp;
   <a href="#install">How to install</a>
 </p>
@@ -82,21 +82,27 @@ Several files at once are converted in parallel. MOV ⇄ MP4 copies the streams 
 
 ## Install
 
-1. **[Download eWheel-1.0.0.dmg](https://github.com/FleetwoodJ/eWheel/releases/latest/download/eWheel-1.0.0.dmg)** (or find it under [Releases](https://github.com/FleetwoodJ/eWheel/releases)). Open it, and drag **eWheel** into **Applications**.
+1. **[Download eWheel.dmg](https://github.com/FleetwoodJ/eWheel/releases/latest/download/eWheel.dmg)** (or find it under [Releases](https://github.com/FleetwoodJ/eWheel/releases)). Open it, and drag **eWheel** into **Applications**.
 2. Open eWheel. Because it isn't notarised by Apple, macOS will say it can't be verified. Click **Done**, then go to **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to eWheel. You only need to do this once.
 3. A wheel icon appears in the menu bar. Open **Settings…** from it to change the keys, choose where files are saved, or turn on **Launch at login**.
 
 eWheel needs no Accessibility, Input Monitoring or Screen Recording permission. It notices drags by watching the system drag pasteboard and the mouse and modifier-key state.
 
+## Updates
+
+eWheel keeps itself up to date from this page's Releases. About once a day it checks for a newer version. When there is one, a small dot appears on the menu-bar icon and the menu offers **Install Update…**. Choosing it downloads the new version, checks it against GitHub's SHA-256 checksum, replaces eWheel in your Applications folder and relaunches, all in a few seconds. You can also choose **Check for Updates…** at any time, or turn automatic checks off in Settings.
+
+eWheel needs to be in a folder you can write to (Applications is fine) to update itself. Version 1.0.0 had no updater, so if you have it, download the latest version from this page once by hand.
+
 ## Privacy
 
-Everything runs locally, using ImageIO, AVFoundation, PDFKit, the AppKit text system, and the command-line tools that ship with macOS (`afconvert`, `zip`, `ditto`, `tar`). eWheel makes no network requests and has no third-party dependencies. It writes a small activity log to `~/Library/Logs/eWheel.log`, which never leaves your Mac.
+Everything runs locally, using ImageIO, AVFoundation, PDFKit, the AppKit text system, and the command-line tools that ship with macOS (`afconvert`, `zip`, `ditto`, `tar`). Your files are never uploaded. eWheel's only network access is the update check: it asks GitHub for the latest release of this project and sends nothing about you or your files. You can turn automatic checks off in Settings. There are no third-party dependencies. It writes a small activity log to `~/Library/Logs/eWheel.log`, which never leaves your Mac.
 
 ## Settings
 
 - **Wheel keys:** pick ⇧, ⌘, ⌃ or ⌥ for each wheel. Choosing a key another wheel uses swaps the two. **Restore Default Keys** sets them back to ⇧ Convert, ⌘ Tools, ⌥ Actions.
 - **Saving:** save new files with the original, in Downloads or on the Desktop, and optionally show them in Finder afterwards.
-- **General:** turn the hover click sound on or off, and launch at login.
+- **General:** turn the hover click sound on or off, launch at login, and check for updates automatically.
 
 ## Build from source
 
@@ -113,6 +119,14 @@ The self-test creates sample image, audio, video, PDF, document, data, subtitle 
 "dist/eWheel.app/Contents/MacOS/eWheel" --render ../Screenshots
 ```
 
+### Publishing a new version
+
+1. Bump `VERSION` in `Scripts/build.sh` (for example `1.2.0`).
+2. Run `./Scripts/build.sh test`, then commit and push.
+3. Create a GitHub release tagged `v1.2.0` with `dist/eWheel.dmg` attached (keep that file name).
+
+Everyone's eWheel finds the new version at its next check. To test the update flow without publishing, point a copy of the app at a local release description: `EWHEEL_UPDATE_FEED=file:///path/to/release.json eWheel --update-now`.
+
 <details>
 <summary>Project layout</summary>
 
@@ -128,6 +142,7 @@ Sources/eWheel/
   Catalog.swift         which segments appear for which file types; output naming
   Converters.swift      image, video, audio, PDF, document, data, subtitle and archive converters, plus file actions
   StatusAnimator.swift  menu-bar icon animation while working
+  Updater.swift         one-click updates from GitHub Releases
   Sound.swift           the hover click
   Render.swift          --render presentation images
   SelfTest.swift        --selftest conversion tests

@@ -218,7 +218,7 @@ private struct SettingsScene: View {
 // MARK: - Menu-bar menu
 
 private struct MenuScene: View {
-    let menu = CGRect(x: 1080, y: 36, width: 330, height: 190)
+    let menu = CGRect(x: 1080, y: 36, width: 330, height: 216)
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -230,6 +230,7 @@ private struct MenuScene: View {
                 item("Saving to: \(Prefs.saveLocation.title.lowercased())", dim: true, indent: true)
                 separator
                 item("Settings…", shortcut: "⌘ ,", highlighted: true)
+                item("Check for Updates…")
                 item("About eWheel")
                 separator
                 item("Quit eWheel", shortcut: "⌘ Q")

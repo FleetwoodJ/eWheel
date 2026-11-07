@@ -37,6 +37,9 @@ enum Prefs {
     /// Click sound when hovering wheel segments (on by default).
     static var hoverSound: Bool { d.object(forKey: "hoverSound") == nil ? true : d.bool(forKey: "hoverSound") }
 
+    /// Check GitHub for a newer eWheel about once a day (on by default).
+    static var autoUpdateCheck: Bool { d.object(forKey: "autoUpdateCheck") == nil ? true : d.bool(forKey: "autoUpdateCheck") }
+
     /// "⇧: Convert · ⌘: Tools · ⌥: Actions"
     static var keySummary: String {
         WheelMode.allCases.map { "\(key(for: $0).glyph): \($0.title)" }.joined(separator: " · ")

@@ -9,7 +9,18 @@ import AppKit
 @MainActor
 final class StatusAnimator {
     private weak var button: NSStatusBarButton?
-    private let idle = AppDelegate.statusIcon()
+    private let plain = AppDelegate.statusIcon()
+    private let badged = AppDelegate.statusIcon(badge: true)
+    private var idle: NSImage { badge ? badged : plain }
+
+    /// Shows a dot on the icon while an update is waiting to be installed.
+    var badge = false {
+        didSet {
+            guard badge != oldValue, jobs == 0 else { return }
+            button?.image = idle
+            button?.toolTip = badge ? "eWheel: an update is available" : nil
+        }
+    }
     private let spin: [NSImage] = (0..<36).map { AppDelegate.statusIcon(rotation: Double($0) * 10) }
     private let done = AppDelegate.statusIcon(solid: true)
     private let failed: NSImage = {
@@ -60,7 +71,7 @@ final class StatusAnimator {
             let work = DispatchWorkItem { [weak self] in
                 guard let self, self.jobs == 0 else { return }
                 self.button?.image = self.idle
-                self.button?.toolTip = nil
+                self.button?.toolTip = self.badge ? "eWheel: an update is available" : nil
             }
             self.settle = work
             DispatchQueue.main.asyncAfter(deadline: .now() + (success ? 0.9 : 2.0), execute: work)

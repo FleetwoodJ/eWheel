@@ -14,7 +14,7 @@ enum Credits {
 @MainActor
 final class SettingsWindow {
     static let shared = SettingsWindow()
-    static let size = CGSize(width: 540, height: 760)
+    static let size = CGSize(width: 540, height: 820)
     private var window: NSWindow?
 
     func show() {
@@ -81,6 +81,7 @@ struct SettingsView: View {
     @AppStorage("saveLocation") private var saveLocation = SaveLocation.beside.rawValue
     @AppStorage("revealAfter") private var revealAfter = false
     @AppStorage("hoverSound") private var hoverSound = true
+    @AppStorage("autoUpdateCheck") private var autoUpdateCheck = true
     private let login = LoginItem()
 
     var body: some View {
@@ -108,6 +109,11 @@ struct SettingsView: View {
                     divider
                     row(icon: "power", shade: Echoro.green, title: "Launch at login") {
                         GlassSwitch(isOn: Binding(get: { login.enabled }, set: { login.set($0) }))
+                    }
+                    divider
+                    row(icon: "arrow.down.circle.fill", shade: Color(red: 0.22, green: 0.46, blue: 0.33),
+                        title: "Check for updates automatically", subtitle: "Looks for a new version on GitHub about once a day") {
+                        GlassSwitch(isOn: $autoUpdateCheck)
                     }
                 }
                 if let error = login.error {

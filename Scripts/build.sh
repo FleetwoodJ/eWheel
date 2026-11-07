@@ -1,17 +1,17 @@
 #!/bin/zsh
 # Builds eWheel.app and packages it as a .dmg.
-#   ./Scripts/build.sh          → dist/eWheel-<version>.dmg
+#   ./Scripts/build.sh          → dist/eWheel.dmg
 #   ./Scripts/build.sh test     → also runs the conversion self-test first
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="1.0.0"
+VERSION="${VERSION:-1.1.0}"   # bump this for each release
 NAME="eWheel"
 EXE="eWheel"
 BUNDLE_ID="com.jfleetwood.ewheel"
 DIST="dist"
 APP="$DIST/$NAME.app"
-DMG="$DIST/$NAME-$VERSION.dmg"
+DMG="$DIST/$NAME.dmg"   # fixed name, so "latest" download links always work
 
 echo "▸ Compiling (release)"
 swift build -c release --arch arm64
@@ -52,7 +52,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleVersion</key><string>$VERSION</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>LSMinimumSystemVersion</key><string>26.0</string>
   <key>LSUIElement</key><true/>

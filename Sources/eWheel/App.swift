@@ -11,6 +11,10 @@ struct Main {
             Render.start(dir: args[i + 1])
             return
         }
+        if args.contains("--update-now") {
+            Updater.runHeadlessUpdate()
+            return
+        }
         if let i = args.firstIndex(of: "--selftest") {
             SelfTest.start(dir: args.count > i + 1 ? args[i + 1] : nil)
             return
@@ -48,6 +52,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = Self.statusIcon()
         controller.status = StatusAnimator(button: statusItem.button)
+        Updater.shared.status = controller.status
+        Updater.shared.onChange = { [weak self] in self?.controller.status?.badge = Updater.shared.available != nil }
+        Updater.shared.start()
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
@@ -71,11 +78,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         status("eWheel is ready")
         status(Prefs.keySummary, indent: 1)
         status("Saving to: \(Prefs.saveLocation.title.lowercased())", indent: 1)
+        if let update = Updater.shared.available { status("Update available: eWheel \(update.version)", indent: 1) }
         menu.addItem(.separator())
 
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
+        let update: NSMenuItem = Updater.shared.available == nil
+            ? NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+            : NSMenuItem(title: "Install Update…", action: #selector(installUpdate), keyEquivalent: "")
+        update.target = self
+        update.isEnabled = !Updater.shared.busy
+        menu.addItem(update)
         let about = NSMenuItem(title: "About eWheel", action: #selector(openAbout), keyEquivalent: "")
         about.target = self
         menu.addItem(about)
@@ -85,6 +99,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // Wait for the menu to finish closing: activating while it is still tracking is often ignored.
     @objc private func openSettings() { DispatchQueue.main.async { SettingsWindow.shared.show() } }
+
+    @objc private func checkForUpdates() { DispatchQueue.main.async { Updater.shared.checkNow() } }
+
+    @objc private func installUpdate() {
+        DispatchQueue.main.async { if let u = Updater.shared.available { Updater.shared.promptInstall(u) } }
+    }
 
     private static func creditText() -> NSAttributedString {
         let p = NSMutableParagraphStyle()
@@ -131,7 +151,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// template image, so it adapts to light and dark menu bars.
     /// - rotation: degrees clockwise, used to spin the picked segment while working.
     /// - solid: all three segments full, the brief "done" frame.
-    static func statusIcon(rotation: Double = 0, solid: Bool = false) -> NSImage {
+    /// - badge: a small dot at the top right, shown when an update is ready.
+    static func statusIcon(rotation: Double = 0, solid: Bool = false, badge: Bool = false) -> NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
             let c = NSPoint(x: 9, y: 9)
             let outer: CGFloat = 8, inner: CGFloat = 4.1, gap: CGFloat = 0.55
@@ -147,6 +168,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             NSColor.black.setFill()
             NSBezierPath(ovalIn: NSRect(x: c.x - 1.6, y: c.y - 1.6, width: 3.2, height: 3.2)).fill()
+            if badge {
+                // Clear a ring round the dot so it reads separately from the wheel.
+                NSGraphicsContext.current?.compositingOperation = .clear
+                NSBezierPath(ovalIn: NSRect(x: 11.4, y: 11.4, width: 7.2, height: 7.2)).fill()
+                NSGraphicsContext.current?.compositingOperation = .sourceOver
+                NSColor.black.setFill()
+                NSBezierPath(ovalIn: NSRect(x: 12.6, y: 12.6, width: 4.8, height: 4.8)).fill()
+            }
             return true
         }
         image.isTemplate = true
