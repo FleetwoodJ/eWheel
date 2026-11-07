@@ -10,7 +10,13 @@
 </p>
 
 <p align="center">
-  macOS 26 or later · Apple silicon · MIT licence · Version 1.0.0
+  <a href="https://github.com/FleetwoodJ/eWheel/releases/latest/download/eWheel-1.0.0.dmg"><b>⬇ Download eWheel 1.0.0 (.dmg, 1.4 MB)</b></a>
+  &nbsp;·&nbsp;
+  <a href="#install">How to install</a>
+</p>
+
+<p align="center">
+  macOS 26 or later · Apple silicon · MIT licence
 </p>
 
 <p align="center">
@@ -76,7 +82,7 @@ Several files at once are converted in parallel. MOV ⇄ MP4 copies the streams 
 
 ## Install
 
-1. Download `eWheel-1.0.0.dmg` from **Releases**, open it, and drag **eWheel** into **Applications**.
+1. **[Download eWheel-1.0.0.dmg](https://github.com/FleetwoodJ/eWheel/releases/latest/download/eWheel-1.0.0.dmg)** (or find it under [Releases](https://github.com/FleetwoodJ/eWheel/releases)). Open it, and drag **eWheel** into **Applications**.
 2. Open eWheel. Because it isn't notarised by Apple, macOS will say it can't be verified. Click **Done**, then go to **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to eWheel. You only need to do this once.
 3. A wheel icon appears in the menu bar. Open **Settings…** from it to change the keys, choose where files are saved, or turn on **Launch at login**.
 
