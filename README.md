@@ -155,7 +155,7 @@ docs/                   icon and screenshots for this page
 
 ## Credits
 
-Designed by JF · Built with Claude.
+Designed by Echoro · Built with Claude.
 
 The drag-and-tap wheel idea was inspired by Tangerine for Mac. eWheel is an independent project and shares no code or assets with it.
 

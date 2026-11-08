@@ -3,7 +3,7 @@ import ServiceManagement
 import SwiftUI
 
 enum Credits {
-    static let line = "Designed by JF · Built with Claude"
+    static let line = "Designed by Echoro · Built with Claude"
     static var version: String {
         let info = Bundle.main.infoDictionary ?? [:]
         return "Version \(info["CFBundleShortVersionString"] as? String ?? "1.0.0")"
