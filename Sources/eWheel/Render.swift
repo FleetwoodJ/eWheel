@@ -100,7 +100,7 @@ private struct Caption: View {
     }
 }
 
-private struct Brand: View {
+private struct BrandMark: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 44, height: 44)
@@ -142,7 +142,7 @@ private struct WheelScene: View {
             DragGhost().position(x: cursor.x + 26, y: cursor.y - 36)
             Cursor().position(x: cursor.x + 9, y: cursor.y + 12)
             Caption(title: "\(key.glyph)  \(model.mode.title)", subtitle: subtitle)
-            Brand()
+            BrandMark()
         }
     }
 }
@@ -241,7 +241,7 @@ private struct MenuScene: View {
             .padding(.leading, menu.minX).padding(.top, menu.minY)
             .environment(\.renderBackdrop, AnyView(Wallpaper()))
             Caption(title: "Menu bar", subtitle: "Always one click away: your keys, where files go, and Settings.")
-            Brand()
+            BrandMark()
         }
     }
 

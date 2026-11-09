@@ -219,6 +219,13 @@ final class Updater {
             guard bundle.bundleIdentifier == Bundle.main.bundleIdentifier else {
                 throw WheelError("The downloaded app isn't eWheel, so it wasn't installed.")
             }
+            // The app inside must carry an intact code signature for the same identifier.
+            do {
+                try await Shell.run("/usr/bin/codesign", ["--verify", "--deep", "--strict",
+                                                          "-R=identifier \"\(Bundle.main.bundleIdentifier ?? "")\"", bundle.bundleURL.path])
+            } catch {
+                throw WheelError("The downloaded app's signature couldn't be verified, so it wasn't installed.")
+            }
             let newVersion = bundle.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
             guard newVersion == update.version else {
                 throw WheelError("The download contains version \(newVersion), not \(update.version).")

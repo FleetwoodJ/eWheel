@@ -5,7 +5,17 @@ import SwiftUI
 /// Drag any file, tap ⇧ / ⌘ / ⌥, and drop it on a segment.
 @main
 struct Main {
+    /// 1.2.0 moved from com.jfleetwood.ewheel to com.echoro.ewheel: copy settings across once.
+    static func migrateSettings() {
+        let d = UserDefaults.standard
+        guard !d.bool(forKey: "migratedFromJfleetwood"),
+              let old = UserDefaults(suiteName: "com.jfleetwood.ewheel")?.persistentDomain(forName: "com.jfleetwood.ewheel") else { return }
+        for (k, v) in old where d.object(forKey: k) == nil { d.set(v, forKey: k) }
+        d.set(true, forKey: "migratedFromJfleetwood")
+    }
+
     @MainActor static func main() {
+        migrateSettings()
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--render"), args.count > i + 1 {
             Render.start(dir: args[i + 1])
@@ -28,17 +38,6 @@ struct Main {
         }
         withExtendedLifetime(delegate) { app.run() }
     }
-}
-
-enum Echoro {
-    /// Echoro Green — the canonical brand colour (#123524).
-    static let green = Color(red: 0x12 / 255, green: 0x35 / 255, blue: 0x24 / 255)
-    /// Primary container tone (#C5ECD2).
-    static let mint = Color(red: 0xC5 / 255, green: 0xEC / 255, blue: 0xD2 / 255)
-    /// On-primary-container tone (#002112).
-    static let deep = Color(red: 0x00, green: 0x21 / 255, blue: 0x12 / 255)
-    /// Mid tone between the two (#5E8C70), used for secondary text.
-    static let sage = Color(red: 0x5E / 255, green: 0x8C / 255, blue: 0x70 / 255)
 }
 
 @MainActor

@@ -5,10 +5,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${VERSION:-1.1.1}"   # bump this for each release
+VERSION="${VERSION:-1.2.0}"   # bump this for each release
 NAME="eWheel"
 EXE="eWheel"
-BUNDLE_ID="com.jfleetwood.ewheel"
+BUNDLE_ID="com.echoro.ewheel"
 DIST="dist"
 APP="$DIST/$NAME.app"
 DMG="$DIST/$NAME.dmg"   # fixed name, so "latest" download links always work

@@ -22,15 +22,6 @@ extension EnvironmentValues {
     }
 }
 
-enum GlassTint {
-    /// Clear glass with a green cast: segments, panels, tracks.
-    static let clear = Echoro.green.opacity(0.26)
-    /// Slightly denser, for the wheel hub and the Settings window chrome.
-    static let dense = Echoro.green.opacity(0.48)
-    /// Selected / "on" state.
-    static let selected = Echoro.mint.opacity(0.88)
-}
-
 struct EchoGlass<S: Shape>: ViewModifier {
     @Environment(\.renderBackdrop) private var backdrop
     let shape: S

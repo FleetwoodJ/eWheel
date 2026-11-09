@@ -9,7 +9,7 @@ enum Log {
     static let wheel = Channel()
     static let url = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Logs/eWheel.log")
-    private static let queue = DispatchQueue(label: "com.jfleetwood.ewheel.log")
+    private static let queue = DispatchQueue(label: "com.echoro.ewheel.log")
 
     static func write(_ s: String) {
         let line = "\(Date().formatted(date: .omitted, time: .standard))  \(s)\n"
