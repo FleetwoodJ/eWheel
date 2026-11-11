@@ -193,7 +193,7 @@ private struct Cursor: View {
 // MARK: - Settings
 
 private struct SettingsScene: View {
-    let origin = CGPoint(x: 790, y: 18)
+    let origin = CGPoint(x: 560, y: 120)
 
     var body: some View {
         let size = SettingsWindow.size

@@ -67,9 +67,9 @@ extension View {
 extension Color {
     /// "Picked" fill (selected segment, key, switch): mint #C5ECD2 on dark, Echoro Green on light,
     /// because mint all but disappears on pale glass.
-    static let pick = Brand.dynamic(dark: Brand.hex(Brand.lPrimaryContainer), light: Brand.hex(Brand.echoroGreen))
+    static let pick = Color.primaryFill   // Echoro kit role: primary #A9CFB7 on dark, Echoro Green on light
     /// Text and icons on `pick`: #002112 on dark, white on light.
-    static let onPick = Brand.dynamic(dark: Brand.hex(Brand.lOnPrimaryContainer), light: Brand.hex(0xFFFFFF))
+    static let onPick = Color.onPrimaryFill   // #002112 on dark, white on light
     /// Error pop-up: container #93000A / #FFDAD6 with error #FFB4AB / #BA1A1A.
     static let errorFill = Brand.dynamic(dark: Brand.hex(0x93000A), light: Brand.hex(0xFFDAD6))
     static let errorInk = Brand.dynamic(dark: Brand.hex(Brand.dError), light: Brand.hex(Brand.lError))
@@ -83,7 +83,7 @@ extension Color {
 
 extension GlassTint {
     /// Glass tint for a picked wheel segment, matching `Color.pick`.
-    static let picked = Brand.dynamic(dark: Brand.hex(Brand.lPrimaryContainer, 0.88), light: Brand.hex(Brand.echoroGreen, 0.88))
+    static let picked = Brand.dynamic(dark: Brand.hex(Brand.dPrimary, 0.88), light: Brand.hex(Brand.echoroGreen, 0.88))
 }
 
 extension Appearance {
@@ -122,17 +122,20 @@ struct GlassSwitch: View {
     }
 }
 
-/// Small rounded-square icon, like the ones in System Settings, in greens.
+/// Small rounded-square icon, like the ones in System Settings, in the Echoro brand pairing:
+/// primary container with on-primary-container (#2B4E3B + #C5ECD2 on dark, #C5ECD2 + #002112 on light).
 struct IconChip: View {
     let symbol: String
-    var shade: Color = Brand.color(Brand.forest)
+
+    static let fill = Brand.dynamic(dark: Brand.hex(Brand.dPrimaryContainer), light: Brand.hex(Brand.lPrimaryContainer))
+    static let glyph = Brand.dynamic(dark: Brand.hex(Brand.dOnPrimaryContainer), light: Brand.hex(Brand.lOnPrimaryContainer))
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(LinearGradient(colors: [shade.opacity(1), shade.opacity(0.75)], startPoint: .top, endPoint: .bottom))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.25), lineWidth: 0.6))
-            .frame(width: 30, height: 30)
-            .overlay(Image(systemName: symbol).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white))
+        RoundedRectangle(cornerRadius: 7, style: .continuous)
+            .fill(Self.fill)
+            .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).stroke(Color.ink.opacity(0.12), lineWidth: 0.6))
+            .frame(width: 26, height: 26)
+            .overlay(Image(systemName: symbol).font(.system(size: 12, weight: .semibold)).foregroundStyle(Self.glyph))
     }
 }
 

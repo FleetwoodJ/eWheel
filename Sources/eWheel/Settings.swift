@@ -14,7 +14,7 @@ enum Credits {
 @MainActor
 final class SettingsWindow {
     static let shared = SettingsWindow()
-    static let size = CGSize(width: 540, height: 870)
+    static let size = CGSize(width: 820, height: 520)
     private var window: NSWindow?
 
     func show() {
@@ -85,78 +85,75 @@ struct SettingsView: View {
     var body: some View {
         ZStack(alignment: .top) {
             SettingsBackground()
-            RenderSafeScroll {
-            VStack(spacing: 18) {
+            VStack(spacing: 14) {
                 header
-                section("Wheel keys", footer: "Start dragging a file, then tap a key. Choosing a key another wheel uses swaps them.") {
-                    ForEach(Array(WheelMode.allCases.enumerated()), id: \.offset) { i, mode in
-                        if i > 0 { divider }
-                        keyRow(mode)
-                    }
-                }
-                section("Wheel segments", footer: nil) {
-                    row(icon: "slider.horizontal.3", shade: Brand.color(Brand.forest), title: "Customise segments",
-                        subtitle: "Hide ones you don't use, star a favourite for the top") {
-                        Button { CustomiseWindow.shared.show() } label: {
-                            Text("Customise\u{2026}")
-                                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                                .padding(.horizontal, 14).frame(height: 28)
-                                .echoGlass(Capsule(), tint: GlassTint.clear, interactive: true)
+                HStack(alignment: .top, spacing: 16) {
+                    VStack(spacing: 14) {
+                        section("Wheel keys", footer: "Start dragging a file, then tap a key. Picking a key another wheel uses swaps them.") {
+                            ForEach(Array(WheelMode.allCases.enumerated()), id: \.offset) { i, mode in
+                                if i > 0 { divider }
+                                keyRow(mode)
+                            }
+                            divider
+                            row(icon: "slider.horizontal.3", title: "Segments", subtitle: "Hide some, star a favourite") {
+                                Button { CustomiseWindow.shared.show() } label: {
+                                    Text("Customise\u{2026}")
+                                        .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                                        .padding(.horizontal, 12).frame(height: 26)
+                                        .echoGlass(Capsule(), tint: GlassTint.clear, interactive: true)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
-                        .buttonStyle(.plain)
-                    }
-                }
-                section("Saving", footer: nil) {
-                    row(icon: "folder.fill", shade: Brand.color(Brand.forest), title: "Save converted files") { locationPicker }
-                    divider
-                    row(icon: "magnifyingglass", shade: Brand.color(Brand.lSecondary), title: "Show in Finder after converting") {
-                        GlassSwitch(isOn: $revealAfter)
-                    }
-                }
-                section("Tools", footer: "Quality applies when eWheel saves JPG, HEIC, WebP or AVIF. Size and width are used by the image Tools wheel.") {
-                    row(icon: "camera.aperture", shade: Brand.color(Brand.dPrimaryContainer), title: "Image quality") {
-                        segmented([("High", "high"), ("Balanced", "balanced"), ("Small", "small")], selection: $imageQuality)
-                    }
-                    divider
-                    row(icon: "scalemass.fill", shade: Brand.color(Brand.forest), title: "Compress to size") {
-                        segmented([1, 2, 5, 10].map { ("\($0) MB", "\($0)") },
-                                  selection: Binding(get: { "\(targetMB)" }, set: { targetMB = Int($0) ?? 2 }))
-                    }
-                    divider
-                    row(icon: "arrow.left.and.right", shade: Brand.color(Brand.lSecondary), title: "Resize width") {
-                        segmented([1280, 1920, 2560, 3840].map { ("\($0)", "\($0)") },
-                                  selection: Binding(get: { "\(resizeWidth)" }, set: { resizeWidth = Int($0) ?? 1920 }))
-                    }
-                }
-                section("General", footer: nil) {
-                    row(icon: "circle.lefthalf.filled", shade: Echoro.green, title: "Appearance") {
-                        segmented([("System", "system"), ("Light", "light"), ("Dark", "dark")], selection: $appearance) {
-                            Appearance.apply()
+                        section("Saving", footer: nil) {
+                            row(icon: "folder.fill", title: "Save to") { locationPicker }
+                            divider
+                            row(icon: "magnifyingglass", title: "Reveal new files", subtitle: "Show them in Finder") { GlassSwitch(isOn: $revealAfter) }
                         }
                     }
-                    divider
-                    row(icon: "speaker.wave.2.fill", shade: Brand.color(Brand.dPrimaryContainer), title: "Click sound on hover") {
-                        GlassSwitch(isOn: $hoverSound)
+                    VStack(spacing: 14) {
+                        section("Tools", footer: "Quality is used for JPG, HEIC, WebP and AVIF.") {
+                            row(icon: "camera.aperture", title: "Image quality") {
+                                segmented([("High", "high"), ("Balanced", "balanced"), ("Small", "small")], selection: $imageQuality)
+                            }
+                            divider
+                            row(icon: "scalemass.fill", title: "Compress to") {
+                                segmented([1, 2, 5, 10].map { ("\($0) MB", "\($0)") },
+                                          selection: Binding(get: { "\(targetMB)" }, set: { targetMB = Int($0) ?? 2 }))
+                            }
+                            divider
+                            row(icon: "arrow.left.and.right", title: "Resize width") {
+                                segmented([1280, 1920, 2560, 3840].map { ("\($0)", "\($0)") },
+                                          selection: Binding(get: { "\(resizeWidth)" }, set: { resizeWidth = Int($0) ?? 1920 }))
+                            }
+                        }
+                        section("General", footer: nil) {
+                            row(icon: "circle.lefthalf.filled", title: "Appearance") {
+                                segmented([("System", "system"), ("Light", "light"), ("Dark", "dark")], selection: $appearance) {
+                                    Appearance.apply()
+                                }
+                            }
+                            divider
+                            row(icon: "speaker.wave.2.fill", title: "Click sound on hover") { GlassSwitch(isOn: $hoverSound) }
+                            divider
+                            row(icon: "power", title: "Launch at login") {
+                                GlassSwitch(isOn: Binding(get: { login.enabled }, set: { login.set($0) }))
+                            }
+                            divider
+                            row(icon: "arrow.down.circle.fill", title: "Check for updates", subtitle: "About once a day, on GitHub") {
+                                GlassSwitch(isOn: $autoUpdateCheck)
+                            }
+                        }
+                        if let error = login.error {
+                            Text(error).font(.system(size: 11, design: .rounded)).foregroundStyle(Color.inkSecondary)
+                        }
                     }
-                    divider
-                    row(icon: "power", shade: Echoro.green, title: "Launch at login") {
-                        GlassSwitch(isOn: Binding(get: { login.enabled }, set: { login.set($0) }))
-                    }
-                    divider
-                    row(icon: "arrow.down.circle.fill", shade: Brand.color(Brand.forest),
-                        title: "Check for updates automatically", subtitle: "Looks for a new version on GitHub about once a day") {
-                        GlassSwitch(isOn: $autoUpdateCheck)
-                    }
-                }
-                if let error = login.error {
-                    Text(error).font(.system(size: 11, design: .rounded)).foregroundStyle(Color.inkSecondary)
                 }
                 footerBar
             }
-            .padding(.horizontal, 26)
-            .padding(.top, 40)
-            .padding(.bottom, 20)
-            }
+            .padding(.horizontal, 22)
+            .padding(.top, 34)
+            .padding(.bottom, 18)
         }
         .frame(width: SettingsWindow.size.width, height: SettingsWindow.size.height, alignment: .top)
         .foregroundStyle(Color.ink)
@@ -164,32 +161,37 @@ struct SettingsView: View {
 
     // MARK: Header
 
+    /// One compact line: icon, name and version.
     private var header: some View {
-        VStack(spacing: 6) {
+        HStack(spacing: 12) {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
-                .frame(width: 76, height: 76)
-                .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
-            Text("eWheel").font(.system(size: 26, weight: .bold, design: .rounded))
-            Text(Credits.version).font(.system(size: 12, weight: .medium, design: .rounded)).foregroundStyle(Color.inkSecondary)
+                .frame(width: 44, height: 44)
+                .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("eWheel").font(.system(size: 20, weight: .bold, design: .rounded))
+                Text(Credits.version).font(.system(size: 11.5, weight: .medium, design: .rounded)).foregroundStyle(Color.inkSecondary)
+            }
+            Spacer()
         }
-        .frame(maxWidth: .infinity)
+        .padding(.leading, 60)   // clear of the window buttons
     }
 
     // MARK: Sections and rows
 
     private func section<C: View>(_ title: String, footer: String?, @ViewBuilder _ content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 5) {
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .semibold, design: .rounded)).tracking(0.8)
+                .font(.system(size: 10.5, weight: .semibold, design: .rounded)).tracking(0.8)
                 .foregroundStyle(Color.inkSecondary)
                 .padding(.leading, 14)
             VStack(spacing: 0) { content() }
                 .padding(.vertical, 4)
-                .echoGlass(RoundedRectangle(cornerRadius: 22, style: .continuous), tint: GlassTint.clear)
+                .echoGlass(RoundedRectangle(cornerRadius: 18, style: .continuous), tint: GlassTint.clear)
             if let footer {
                 Text(footer)
-                    .font(.system(size: 11, design: .rounded))
+                    .font(.system(size: 10.5, design: .rounded))
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(Color.inkSecondary)
                     .padding(.horizontal, 14)
             }
@@ -197,36 +199,36 @@ struct SettingsView: View {
     }
 
     private var divider: some View {
-        Rectangle().fill(Color.divider).frame(height: 0.8).padding(.leading, 58)
+        Rectangle().fill(Color.divider).frame(height: 0.8).padding(.leading, 48)
     }
 
-    private func row<C: View>(icon: String, shade: Color, title: String, subtitle: String? = nil,
+    private func row<C: View>(icon: String, title: String, subtitle: String? = nil,
                               @ViewBuilder _ control: () -> C) -> some View {
-        HStack(spacing: 12) {
-            IconChip(symbol: icon, shade: shade)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 13.5, weight: .medium, design: .rounded))
+        HStack(spacing: 10) {
+            IconChip(symbol: icon)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(title).font(.system(size: 12.5, weight: .medium, design: .rounded)).lineLimit(1)
                 if let subtitle {
-                    Text(subtitle).font(.system(size: 11, design: .rounded)).foregroundStyle(Color.inkSecondary)
+                    Text(subtitle).font(.system(size: 10.5, design: .rounded)).foregroundStyle(Color.inkSecondary).lineLimit(1)
                 }
             }
-            Spacer(minLength: 8)
+            Spacer(minLength: 6)
             control()
         }
-        .padding(.horizontal, 14)
-        .frame(minHeight: 50)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 40)
     }
 
     // MARK: Wheel keys
 
     private func keyRow(_ mode: WheelMode) -> some View {
-        let info: (String, Color, String) = switch mode {
-        case .convert: ("arrow.triangle.2.circlepath", Brand.color(Brand.forest), "Change a file's format")
-        case .tools: ("wrench.and.screwdriver.fill", Brand.color(Brand.lSecondary), "Compress, resize, rotate, merge")
-        case .actions: ("bolt.fill", Brand.color(Brand.dPrimaryContainer), "AirDrop, copy, move, Terminal")
+        let info: (String, String) = switch mode {
+        case .convert: ("arrow.triangle.2.circlepath", "Change format")
+        case .tools: ("wrench.and.screwdriver.fill", "Compress, resize, trim")
+        case .actions: ("bolt.fill", "AirDrop, copy, move")
         }
-        return row(icon: info.0, shade: info.1, title: mode.title, subtitle: info.2) {
-            HStack(spacing: 6) {
+        return row(icon: info.0, title: mode.title, subtitle: info.1) {
+            HStack(spacing: 4) {
                 ForEach(ModKey.allCases) { k in keycap(k, for: mode) }
             }
         }
@@ -236,9 +238,9 @@ struct SettingsView: View {
         let on = value(mode) == k.rawValue
         return Button { withAnimation(.snappy(duration: 0.2)) { choose(k.rawValue, for: mode) } } label: {
             Text(k.glyph)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.system(size: 13.5, weight: .semibold, design: .rounded))
                 .foregroundStyle(on ? Color.onPick : Color.ink)
-                .frame(width: 34, height: 30)
+                .frame(width: 30, height: 26)
                 .background {
                     if on {
                         RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color.pick)
@@ -268,10 +270,10 @@ struct SettingsView: View {
                     onPick()
                 } label: {
                     Text(label)
-                        .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundStyle(on ? Color.onPick : Color.ink)
-                        .padding(.horizontal, 11)
-                        .frame(height: 26)
+                        .padding(.horizontal, 8)
+                        .frame(height: 24)
                         .background { if on { Capsule().fill(Color.pick) } }
                         .contentShape(Capsule())
                 }

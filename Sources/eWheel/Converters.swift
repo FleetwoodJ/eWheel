@@ -136,11 +136,6 @@ enum Img {
         }
     }
 
-    static func half(_ img: CGImage) -> CGImage {
-        let w = max(img.width / 2, 1), h = max(img.height / 2, 1)
-        return draw(w, h) { $0.draw(img, in: CGRect(x: 0, y: 0, width: w, height: h)) }
-    }
-
     static func rotate(_ img: CGImage) -> CGImage {
         draw(img.height, img.width) { c in
             c.translateBy(x: 0, y: CGFloat(img.width))
