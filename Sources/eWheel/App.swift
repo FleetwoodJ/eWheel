@@ -44,6 +44,10 @@ struct Main {
     @MainActor static func main() {
         migrateSettings()
         let args = CommandLine.arguments
+        if let i = args.firstIndex(of: "--render-customise"), args.count > i + 1 {
+            Render.customisePreview(out: args[i + 1])
+            return
+        }
         if let i = args.firstIndex(of: "--render-trim"), args.count > i + 2 {
             Render.trimPreview(file: args[i + 1], out: args[i + 2])
             return

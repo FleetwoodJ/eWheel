@@ -58,7 +58,7 @@ enum SelfTest {
         var pass = 0, fail = 0
         for sample in samples {
             for mode in [WheelMode.convert, .tools] {
-                for item in Catalog.items(mode: mode, kind: FileKind.of([sample]), urls: [sample]) {
+                for item in Catalog.items(mode: mode, kind: FileKind.of([sample]), urls: [sample], customised: false) {
                     if item.interactive {
                         print("SKIP  \(sample.lastPathComponent.padding(toLength: 16, withPad: " ", startingAt: 0)) \(mode.key) \(item.title.padding(toLength: 10, withPad: " ", startingAt: 0)) opens a window (tested directly below)")
                         continue
@@ -132,6 +132,23 @@ enum SelfTest {
                 _ = try await History.shared.undoLast()
                 guard !FileManager.default.fileExists(atPath: out.path) else { throw WheelError("file still there") }
                 return "\(out.lastPathComponent) removed by Undo"
+            }),
+            ("customise the wheel", {
+                let savedHidden = Customisation.hidden, savedFav = Customisation.favourites
+                defer { Customisation.hidden = savedHidden; Customisation.favourites = savedFav }
+                let g = Customisation.group(.convert, .image)
+                let photo = [URL(fileURLWithPath: "/tmp/photo.heic")]
+                Customisation.reset(g)
+                Customisation.setHidden(g, "BMP", true)
+                Customisation.toggleFavourite(g, "PDF")
+                let items = Catalog.items(mode: .convert, kind: .image, urls: photo)
+                guard items.first?.key == "PDF" else { throw WheelError("favourite isn't at the top") }
+                guard !items.contains(where: { $0.key == "BMP" }) else { throw WheelError("hidden segment still shown") }
+                // Hiding everything must never leave an empty wheel
+                for item in Catalog.allItems(mode: .convert, kind: .image) { Customisation.setHidden(g, item.key, true) }
+                Customisation.toggleFavourite(g, "PDF")   // clear the favourite too
+                guard !Catalog.items(mode: .convert, kind: .image, urls: photo).isEmpty else { throw WheelError("wheel was emptied") }
+                return "PDF on top, BMP hidden, never empty"
             }),
             ("cancel stops a tool", {
                 let t0 = Date()

@@ -304,3 +304,39 @@ extension Render {
         RunLoop.main.run()
     }
 }
+
+// MARK: - Customise window (review image)
+
+extension Render {
+    /// `eWheel --render-customise <out.png>`: the Customise window with an example setup, to review its design.
+    static func customisePreview(out: String) {
+        _ = NSApplication.shared
+        NSApp.appearance = NSAppearance(named: .darkAqua)
+        Task { @MainActor in
+            // Example: Convert for images, PNG starred, BMP and GIF hidden. Restored afterwards.
+            let savedHidden = Customisation.hidden, savedFav = Customisation.favourites
+            let model = CustomiseModel()
+            model.mode = .convert
+            model.kind = .image
+            Customisation.reset(model.group)
+            Customisation.toggleFavourite(model.group, "PNG")
+            Customisation.setHidden(model.group, "BMP", true)
+            Customisation.setHidden(model.group, "GIF", true)
+            model.version += 1
+            let size = CustomiseWindow.size
+            let view = CustomiseView(model: model)
+                .environment(\.renderBackdrop, AnyView(Backdrop().frame(width: size.width, height: size.height)))
+                .environment(\.colorScheme, .dark)
+            let r = ImageRenderer(content: view)
+            r.scale = 2
+            if let cg = r.cgImage, let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) {
+                try? png.write(to: URL(fileURLWithPath: out))
+                print("Wrote \(out)")
+            }
+            Customisation.hidden = savedHidden
+            Customisation.favourites = savedFav
+            exit(0)
+        }
+        RunLoop.main.run()
+    }
+}

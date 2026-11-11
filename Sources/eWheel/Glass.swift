@@ -135,3 +135,21 @@ struct IconChip: View {
             .overlay(Image(systemName: symbol).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white))
     }
 }
+
+/// Scrolls in the app; in presentation renders it draws everything instead, because the
+/// off-screen renderer leaves scroll views empty.
+struct RenderSafeScroll<Content: View>: View {
+    @Environment(\.renderBackdrop) private var backdrop
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if backdrop != nil {
+            content()
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxHeight: .infinity, alignment: .top)   // as if scrolled to the top
+                .clipped()
+        } else {
+            ScrollView(.vertical, showsIndicators: false) { content() }
+        }
+    }
+}

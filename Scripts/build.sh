@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${VERSION:-1.3.0}"   # bump this for each release
+VERSION="${VERSION:-1.4.0}"   # bump this for each release
 NAME="eWheel"
 EXE="eWheel"
 BUNDLE_ID="com.echoro.ewheel"

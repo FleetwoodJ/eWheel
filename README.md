@@ -104,6 +104,7 @@ Everything runs locally, using ImageIO, AVFoundation, PDFKit, the AppKit text sy
 ## Settings
 
 - **Wheel keys:** pick ⇧, ⌘, ⌃ or ⌥ for each wheel. Choosing a key another wheel uses swaps the two. **Restore Default Keys** sets them back to ⇧ Convert, ⌘ Tools, ⌥ Actions.
+- **Wheel segments:** **Customise…** opens a window where you pick a wheel and file type, hide segments you never use, and star a favourite that always sits at the top. A mini preview shows the wheel as it will open, and **Reset** restores the defaults.
 - **Saving:** save new files with the original, in Downloads or on the Desktop, and optionally show them in Finder afterwards.
 - **Tools:** the target for Compress to size (1, 2, 5 or 10 MB) and the width for Resize (1280, 1920, 2560 or 3840 px).
 - **General:** Appearance (System, Light or Dark), the hover click sound, launch at login, and automatic update checks.
@@ -149,6 +150,7 @@ Sources/eWheel/
   Updater.swift         one-click updates from GitHub Releases
   Jobs.swift            progress, Cancel, Recent conversions and Undo
   Tools.swift           compress to size, resize to width, Trim window
+  Customise.swift       hide segments and choose a favourite, per wheel and file type
   EchoroBrand.swift     shared Echoro palette (from the Echoro Design Kit)
   Sound.swift           the hover click
   Render.swift          --render presentation images

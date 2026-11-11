@@ -14,12 +14,15 @@ struct WheelItem: Identifiable {
     var announces = false
     /// Opens a window first (Trim): the job only counts as working once the user confirms.
     var interactive = false
+    /// Stable identity for Customise (hide / favourite); the title unless it changes with Settings.
+    var key: String
 
     init(title: String, symbol: String, detail: String, run: @escaping @MainActor ([URL]) async throws -> String) {
         self.title = title
         self.symbol = symbol
         self.detail = detail
         self.run = run
+        key = title
     }
 }
 
@@ -53,12 +56,21 @@ enum FileKind: Equatable {
 
 @MainActor
 enum Catalog {
-    static func items(mode: WheelMode, kind: FileKind, urls: [URL]) -> [WheelItem] {
-        switch mode {
-        case .convert: return convert(kind, urls)
-        case .tools: return tools(kind, urls)
-        case .actions: return Actions.items
+    /// The segments for these files, with your Customise choices applied (unless `customised` is false).
+    static func items(mode: WheelMode, kind: FileKind, urls: [URL], customised: Bool = true) -> [WheelItem] {
+        let all: [WheelItem] = switch mode {
+        case .convert: convert(kind, urls)
+        case .tools: tools(kind, urls)
+        case .actions: Actions.items
         }
+        return customised ? Customisation.apply(all, mode: mode, kind: kind) : all
+    }
+
+    /// Every segment a wheel can show for a file type, for the Customise window.
+    static func allItems(mode: WheelMode, kind: FileKind) -> [WheelItem] {
+        // No real files: nothing is filtered out for matching the source format.
+        let urls = kind == .mixed ? [URL(fileURLWithPath: "/tmp/a.png"), URL(fileURLWithPath: "/tmp/b.pdf")] : []
+        return items(mode: mode, kind: kind, urls: urls, customised: false)
     }
 
     // MARK: ⇧ Convert
@@ -156,11 +168,11 @@ enum Catalog {
                 item("≤ \(Prefs.targetMB) MB", "scalemass", "Compress to under \(Prefs.targetMB) MB") { urls in
                     let mb = Prefs.targetMB
                     return try await each(urls) { u in try await bg { try Img.compressToSize(u, maxBytes: mb * 1_000_000, label: "\(mb) MB") } }
-                },
+                }.keyed("SIZE"),
                 item("\(Prefs.resizeWidth) W", "arrow.left.and.right", "Resize to \(Prefs.resizeWidth) px wide") { urls in
                     let w = Prefs.resizeWidth
                     return try await each(urls) { u in try await bg { try Img.transform(u, suffix: "-\(w)w", Img.resize(toWidth: w)) } }
-                },
+                }.keyed("WIDTH"),
                 item("ROTATE", "rotate.right", "Rotate 90° clockwise") { try await each($0) { u in try await bg { try Img.transform(u, suffix: "-rotated", Img.rotate) } } },
                 item("FLIP", "arrow.left.and.right.righttriangle.left.righttriangle.right", "Flip horizontally") { try await each($0) { u in try await bg { try Img.transform(u, suffix: "-flipped", Img.flip) } } },
                 item("SQUARE", "crop", "Crop to centre square") { try await each($0) { u in try await bg { try Img.transform(u, suffix: "-square", Img.square) } } },
@@ -331,4 +343,5 @@ enum Out {
 extension WheelItem {
     var announcing: WheelItem { var c = self; c.announces = true; return c }
     var interactiveItem: WheelItem { var c = self; c.interactive = true; return c }
+    func keyed(_ key: String) -> WheelItem { var c = self; c.key = key; return c }
 }

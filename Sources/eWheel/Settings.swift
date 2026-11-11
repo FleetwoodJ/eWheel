@@ -84,13 +84,25 @@ struct SettingsView: View {
     var body: some View {
         ZStack(alignment: .top) {
             SettingsBackground()
-            ScrollView(.vertical, showsIndicators: false) {
+            RenderSafeScroll {
             VStack(spacing: 18) {
                 header
                 section("Wheel keys", footer: "Start dragging a file, then tap a key. Choosing a key another wheel uses swaps them.") {
                     ForEach(Array(WheelMode.allCases.enumerated()), id: \.offset) { i, mode in
                         if i > 0 { divider }
                         keyRow(mode)
+                    }
+                }
+                section("Wheel segments", footer: nil) {
+                    row(icon: "slider.horizontal.3", shade: Brand.color(Brand.forest), title: "Customise segments",
+                        subtitle: "Hide ones you don't use, star a favourite for the top") {
+                        Button { CustomiseWindow.shared.show() } label: {
+                            Text("Customise\u{2026}")
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .padding(.horizontal, 14).frame(height: 28)
+                                .echoGlass(Capsule(), tint: GlassTint.clear, interactive: true)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 section("Saving", footer: nil) {
@@ -141,7 +153,7 @@ struct SettingsView: View {
             .padding(.bottom, 20)
             }
         }
-        .frame(width: SettingsWindow.size.width, height: SettingsWindow.size.height)
+        .frame(width: SettingsWindow.size.width, height: SettingsWindow.size.height, alignment: .top)
         .foregroundStyle(Color.ink)
     }
 
