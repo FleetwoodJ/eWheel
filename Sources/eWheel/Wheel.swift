@@ -201,21 +201,37 @@ final class WheelController {
         let started = Date()
         // Silent on success: no "working" or "saved" pop-ups. Only failures,
         // and results that are themselves information (word count), are shown.
-        status?.begin()
-        Task { @MainActor in
+        let job = Job(detail: item.detail, files: files)
+        Job.current = job
+        Job.status = status
+        if !item.interactive {
+            job.began = true
+            status?.begin()
+        }
+        job.task = Task { @MainActor in
+            defer { if Job.current === job { Job.current = nil } }
             do {
                 Out.resetProduced()
                 let message = try await item.run(files)
+                try Task.checkCancellation()
                 let made = Out.produced.filter { FileManager.default.fileExists(atPath: $0.path) }
+                History.shared.add(item.detail, outputs: made)
                 if Prefs.revealAfter, !made.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(made) }
                 Log.wheel.notice("done in \(String(format: "%.2f", Date().timeIntervalSince(started)))s: \(message)")
                 if item.announces {
                     Toast.shared.show(title: message, detail: item.detail, symbol: item.symbol, at: at)
                 }
-                status?.end(success: true)
+                if job.began { status?.end(success: true) }
+            } catch where job.cancelled {
+                // Remove anything half-written by this job; never touches the originals.
+                for url in Out.produced where FileManager.default.fileExists(atPath: url.path) {
+                    try? FileManager.default.removeItem(at: url)
+                }
+                Log.wheel.notice("cancelled: \(item.detail)")
+                if job.began { status?.end(success: true, cancelled: true) }
             } catch {
                 Log.wheel.error("failed: \(error.localizedDescription)")
-                status?.end(success: false)
+                if job.began { status?.end(success: false) } else { status?.begin(); status?.end(success: false) }
                 Toast.shared.show(title: "\(item.detail) failed", detail: error.localizedDescription,
                                   symbol: "exclamationmark.circle", at: at, duration: 4)
             }

@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import PDFKit
 
 /// `eWheel --selftest [dir]` makes sample files and runs every ⇧ and ⌘
 /// segment on them, printing PASS/FAIL. Used by `Scripts/build.sh test`.
@@ -58,10 +59,16 @@ enum SelfTest {
         for sample in samples {
             for mode in [WheelMode.convert, .tools] {
                 for item in Catalog.items(mode: mode, kind: FileKind.of([sample]), urls: [sample]) {
+                    if item.interactive {
+                        print("SKIP  \(sample.lastPathComponent.padding(toLength: 16, withPad: " ", startingAt: 0)) \(mode.key) \(item.title.padding(toLength: 10, withPad: " ", startingAt: 0)) opens a window (tested directly below)")
+                        continue
+                    }
                     do {
                         let msg = try await item.run([sample])
                         pass += 1
                         print("PASS  \(sample.lastPathComponent.padding(toLength: 16, withPad: " ", startingAt: 0)) \(mode.key) \(item.title.padding(toLength: 10, withPad: " ", startingAt: 0)) \(msg)")
+                    } catch where error.localizedDescription.contains("is already under") {
+                        print("SKIP  \(sample.lastPathComponent.padding(toLength: 16, withPad: " ", startingAt: 0)) \(mode.key) \(item.title.padding(toLength: 10, withPad: " ", startingAt: 0)) sample is already small (tested directly below)")
                     } catch where error.localizedDescription.contains("has no audio track") {
                         print("SKIP  \(sample.lastPathComponent.padding(toLength: 16, withPad: " ", startingAt: 0)) \(mode.key) \(item.title.padding(toLength: 10, withPad: " ", startingAt: 0)) sample video is silent (error shown correctly)")
                     } catch {
@@ -69,6 +76,82 @@ enum SelfTest {
                         print("FAIL \(sample.lastPathComponent.padding(toLength: 16, withPad: " ", startingAt: 0)) \(mode.key) \(item.title.padding(toLength: 10, withPad: " ", startingAt: 0)) \(error.localizedDescription)")
                     }
                 }
+            }
+        }
+        // Features added in 1.3.0, checked directly
+        let features: [(String, () async throws -> String)] = [
+            ("compress to size", {
+                let big = root.appendingPathComponent("big.png")
+                // Random noise: like a detailed photo, it can't be squeezed under 1 MB without real work
+                let noise = Img.draw(2400, 1600) { c in
+                    guard let p = c.data?.assumingMemoryBound(to: UInt8.self) else { return }
+                    let n = c.bytesPerRow * c.height
+                    arc4random_buf(p, n)
+                    for i in stride(from: 3, to: n, by: 4) { p[i] = 255 }
+                }
+                try Img.write(noise, to: big, type: .png, meta: nil)
+                let out = try Img.compressToSize(big, maxBytes: 1_000_000, label: "1 MB")
+                let size = (try out.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? .max
+                guard size <= 1_000_000 else { throw WheelError("\(size) bytes is over 1 MB") }
+                return "\(out.lastPathComponent) is \(size / 1000) KB"
+            }),
+            ("resize width", {
+                let png = samples.first { $0.pathExtension == "png" }!
+                let out = try Img.transform(png, suffix: "-w320", Img.resize(toWidth: 320))
+                let (img, _) = try Img.load(out)
+                guard img.width == 320, img.height == 200 else { throw WheelError("got \(img.width)×\(img.height)") }
+                return "\(out.lastPathComponent) is 320×200"
+            }),
+            ("trim", {
+                let mov = samples.first { $0.pathExtension == "mov" }!
+                let out = try await AV.trim(mov, range: CMTimeRange(start: CMTime(seconds: 0.5, preferredTimescale: 600),
+                                                                    end: CMTime(seconds: 1.5, preferredTimescale: 600)))
+                let d = try await AVURLAsset(url: out).load(.duration).seconds
+                guard abs(d - 1.0) < 0.3 else { throw WheelError("duration \(d)s, expected about 1s") }
+                return "\(out.lastPathComponent) is \(String(format: "%.1f", d))s"
+            }),
+            ("mixed: combine PDF", {
+                let png = samples.first { $0.pathExtension == "png" }!, pdf = samples.first { $0.pathExtension == "pdf" }!
+                guard Mixed.canCombine([png, pdf]) else { throw WheelError("not offered") }
+                let out = try await Mixed.combinePDF([png, pdf])
+                let pages = PDFDocument(url: out)?.pageCount ?? 0
+                guard pages == 3 else { throw WheelError("\(pages) pages, expected 3") }
+                return "\(out.lastPathComponent) has 3 pages"
+            }),
+            ("mixed: compress", {
+                let png = samples.first { $0.pathExtension == "png" }!, csv = samples.first { $0.pathExtension == "csv" }!
+                return try await Mixed.compress([png, csv])
+            }),
+            ("undo", {
+                let png = samples.first { $0.pathExtension == "png" }!
+                let out = try Img.transform(png, suffix: "-undo", Img.flip)
+                let realRecycle = History.shared.recycle
+                History.shared.recycle = { urls in for u in urls { try FileManager.default.removeItem(at: u) } }
+                defer { History.shared.recycle = realRecycle }
+                History.shared.add("Flip horizontally", outputs: [out])
+                _ = try await History.shared.undoLast()
+                guard !FileManager.default.fileExists(atPath: out.path) else { throw WheelError("file still there") }
+                return "\(out.lastPathComponent) removed by Undo"
+            }),
+            ("cancel stops a tool", {
+                let t0 = Date()
+                let task = Task { try await Shell.run("/bin/sleep", ["30"]) }
+                try await Task.sleep(nanoseconds: 300_000_000)
+                task.cancel()
+                do { try await task.value; throw WheelError("finished instead of cancelling") } catch is CancellationError {}
+                let s = Date().timeIntervalSince(t0)
+                guard s < 3 else { throw WheelError("took \(s)s to stop") }
+                return String(format: "stopped after %.1fs", s)
+            }),
+        ]
+        for (name, check) in features {
+            do {
+                let msg = try await check()
+                pass += 1
+                print("PASS  \(name.padding(toLength: 27, withPad: " ", startingAt: 0)) \(msg)")
+            } catch {
+                fail += 1
+                print("FAIL  \(name.padding(toLength: 27, withPad: " ", startingAt: 0)) \(error.localizedDescription)")
             }
         }
         print("\n\(pass) passed, \(fail) failed")

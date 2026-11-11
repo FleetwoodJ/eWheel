@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import SwiftUI
 
 /// `eWheel --render <folder>` draws presentation images of the three wheels,
@@ -11,8 +12,13 @@ import SwiftUI
 enum Render {
     static let size = CGSize(width: 1440, height: 900)
 
-    static func start(dir: String) {
+    /// Presentation images use the dark look; `light: true` renders the light look for review.
+    static var scheme: ColorScheme = .dark
+
+    static func start(dir: String, light: Bool = false) {
         _ = NSApplication.shared
+        scheme = light ? .light : .dark
+        NSApp.appearance = NSAppearance(named: light ? .aqua : .darkAqua)
         Task { @MainActor in
             let out = URL(fileURLWithPath: dir)
             try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
@@ -34,7 +40,7 @@ enum Render {
     }
 
     static func save<V: View>(_ view: V, to url: URL) {
-        let r = ImageRenderer(content: view.frame(width: size.width, height: size.height).environment(\.colorScheme, .dark))
+        let r = ImageRenderer(content: view.frame(width: size.width, height: size.height).environment(\.colorScheme, scheme))
         r.scale = 2
         guard let cg = r.cgImage,
               let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) else {
@@ -56,7 +62,11 @@ private func hex(_ v: UInt32, _ a: Double = 1) -> Color {
 private struct Wallpaper: View {
     var body: some View {
         ZStack {
-            LinearGradient(colors: [hex(0x111412), hex(0x123524), hex(0x2B4E3B)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            if Render.scheme == .light {
+                LinearGradient(colors: [hex(0xF8FAF5), hex(0xD0E8D7), hex(0xC5ECD2)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            } else {
+                LinearGradient(colors: [hex(0x111412), hex(0x123524), hex(0x2B4E3B)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            }
             Circle().fill(hex(0xC5ECD2, 0.34)).frame(width: 640).blur(radius: 150).offset(x: -420, y: -230)
             Circle().fill(hex(0x2F6B57, 0.60)).frame(width: 560).blur(radius: 120).offset(x: 440, y: 260)
             Circle().fill(hex(0xA9CFB7, 0.26)).frame(width: 420).blur(radius: 90).offset(x: 180, y: -260)
@@ -183,7 +193,7 @@ private struct Cursor: View {
 // MARK: - Settings
 
 private struct SettingsScene: View {
-    let origin = CGPoint(x: 790, y: 64)
+    let origin = CGPoint(x: 790, y: 18)
 
     var body: some View {
         let size = SettingsWindow.size
@@ -259,5 +269,38 @@ private struct MenuScene: View {
         .padding(.leading, indent ? 26 : 10).padding(.trailing, 10)
         .frame(height: 26)
         .background(RoundedRectangle(cornerRadius: 7).fill(highlighted ? Echoro.mint.opacity(0.92) : .clear))
+    }
+}
+
+// MARK: - Trim window (review image)
+
+extension Render {
+    /// `eWheel --render-trim <video> <out.png>`: draws the Trim window for a file, to review its design.
+    static func trimPreview(file: String, out: String) {
+        _ = NSApplication.shared
+        NSApp.appearance = NSAppearance(named: .darkAqua)
+        Task { @MainActor in
+            let url = URL(fileURLWithPath: file)
+            let model = TrimModel(url: url, isVideo: true)
+            model.duration = (try? await AVURLAsset(url: url).load(.duration).seconds) ?? 10
+            model.start = model.duration * 0.15
+            model.end = model.duration * 0.8
+            if let (cg, _) = try? await AVAssetImageGenerator(asset: AVURLAsset(url: url)).image(at: CMTime(seconds: model.start, preferredTimescale: 600)) {
+                model.preview = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+            }
+            let size = CGSize(width: 480, height: 470)
+            let view = TrimView(model: model, onCancel: {}, onTrim: {})
+                .frame(width: size.width, height: size.height)
+                .environment(\.renderBackdrop, AnyView(Backdrop().frame(width: size.width, height: size.height)))
+                .environment(\.colorScheme, .dark)
+            let r = ImageRenderer(content: view)
+            r.scale = 2
+            if let cg = r.cgImage, let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) {
+                try? png.write(to: URL(fileURLWithPath: out))
+                print("Wrote \(out)")
+            }
+            exit(0)
+        }
+        RunLoop.main.run()
     }
 }

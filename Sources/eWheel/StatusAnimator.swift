@@ -58,9 +58,17 @@ final class StatusAnimator {
         button?.toolTip = "eWheel is working…"
     }
 
-    func end(success: Bool) {
+    func end(success: Bool, cancelled: Bool = false) {
         jobs = max(0, jobs - 1)
         guard jobs == 0 else { return }
+        if cancelled {
+            // Cancelled: straight back to idle, no "done" or "failed" flash.
+            timer?.invalidate()
+            timer = nil
+            button?.image = idle
+            button?.toolTip = badge ? "eWheel: an update is available" : nil
+            return
+        }
         // Spin for at least half a second, so instant conversions still register.
         let wait = max(0, 0.5 - Date().timeIntervalSince(startedAt))
         DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in

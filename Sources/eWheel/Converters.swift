@@ -215,7 +215,17 @@ enum AV {
             throw WheelError("This file can't be exported with that preset")
         }
         let out = Out.url(for: src, suffix: suffix, ext: ext)
+        // Live progress for the menu while the export runs
+        // Reading an export session's state from another task is safe; AVFoundation just doesn't mark it Sendable.
+        nonisolated(unsafe) let watched = session
+        let monitor = Task {
+            for await state in watched.states(updateInterval: 0.25) {
+                if case .exporting(let progress) = state { JobProgress.report(progress.fractionCompleted) }
+            }
+        }
+        defer { monitor.cancel() }
         try await session.export(to: out, as: type)
+        try Task.checkCancellation()
         return out
     }
 
@@ -275,8 +285,12 @@ enum AV {
         CGImageDestinationSetProperties(dest, [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]] as CFDictionary)
         let frame = [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFDelayTime: 1 / fps]] as CFDictionary
         var added = 0
+        var seen = 0
         for await result in gen.images(for: times) {
+            try Task.checkCancellation()
             if let img = try? result.image { CGImageDestinationAddImage(dest, img, frame); added += 1 }
+            seen += 1
+            JobProgress.report(Double(seen) / Double(count))
         }
         guard added > 0, CGImageDestinationFinalize(dest) else { throw WheelError("No frames could be read") }
         return out
@@ -627,25 +641,32 @@ enum Arch {
 // MARK: - Shell
 
 enum Shell {
+    /// Runs a command-line tool; cancelling the task stops the tool.
     static func run(_ exe: String, _ args: [String], cwd: URL? = nil) async throws {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: exe)
-            p.arguments = args
-            if let cwd { p.currentDirectoryURL = cwd }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: exe)
+        p.arguments = args
+        if let cwd { p.currentDirectoryURL = cwd }
+        try await withTaskCancellationHandler {
+          try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             let err = Pipe()
             p.standardError = err
             p.standardOutput = FileHandle.nullDevice
             p.terminationHandler = { proc in
                 let data = err.fileHandleForReading.readDataToEndOfFile()
                 if proc.terminationStatus == 0 { cont.resume() }
+                else if proc.terminationReason == .uncaughtSignal { cont.resume(throwing: CancellationError()) }   // stopped by Cancel
                 else {
                     let msg = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
                     cont.resume(throwing: WheelError(msg.isEmpty ? "\((exe as NSString).lastPathComponent) failed" : String(msg.prefix(200))))
                 }
             }
             do { try p.run() } catch { cont.resume(throwing: error) }
+          }
+        } onCancel: {
+            if p.isRunning { p.terminate() }
         }
+        try Task.checkCancellation()
     }
 }
 
@@ -653,7 +674,7 @@ enum Shell {
 
 @MainActor
 enum Actions {
-    static let items: [WheelItem] = [
+    static var items: [WheelItem] { [
         Catalog.item("AIRDROP", "dot.radiowaves.left.and.right", "Share with AirDrop") { urls in
             guard let s = NSSharingService(named: .sendViaAirDrop), s.canPerform(withItems: urls) else {
                 throw WheelError("AirDrop isn't available")
@@ -677,7 +698,7 @@ enum Actions {
             guard panel.runModal() == .OK, let dest = panel.url else { return "Move cancelled" }
             for u in urls {
                 let ext = u.pathExtension
-                try FileManager.default.moveItem(at: u, to: Out.url(in: dest, base: Out.base(of: u), ext: ext))
+                try FileManager.default.moveItem(at: u, to: Out.url(in: dest, base: Out.base(of: u), ext: ext, record: false))
             }
             return "Moved to \(dest.lastPathComponent)"
         },
@@ -713,5 +734,62 @@ enum Actions {
             NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
             return "Checksum copied"
         },
-    ]
+    ] }
+}
+
+// MARK: - Mixed selections (files of different kinds dragged together)
+
+@MainActor
+enum Mixed {
+    static func kinds(_ urls: [URL]) -> Set<FileKind> { Set(urls.map(FileKind.kind(of:))) }
+
+    /// Every file is an image or a PDF, so they can become one PDF.
+    static func canCombine(_ urls: [URL]) -> Bool { kinds(urls).isSubset(of: [.image, .pdf]) }
+
+    static func compressible(_ kind: FileKind) -> Bool { [.image, .video, .audio, .pdf].contains(kind) }
+
+    /// Images become pages and PDFs add all their pages, in the order the files were dragged.
+    static func combinePDF(_ urls: [URL]) async throws -> URL {
+        let merged = PDFDocument()
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("eWheel-combine-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        for (i, u) in urls.enumerated() {
+            try Task.checkCancellation()
+            let doc: PDFDocument
+            if FileKind.kind(of: u) == .pdf {
+                doc = try PDFTools.open(u)
+            } else {
+                let page = tmp.appendingPathComponent("\(i).pdf")
+                try await bg { try Img.writePDF([Img.load(u).0], to: page) }
+                guard let d = PDFDocument(url: page) else { throw WheelError("Couldn't add \(u.lastPathComponent)") }
+                doc = d
+            }
+            for p in 0..<doc.pageCount { if let page = doc.page(at: p) { merged.insert(page, at: merged.pageCount) } }
+            JobProgress.report(Double(i + 1) / Double(urls.count))
+        }
+        let out = Out.url(in: Out.dir(for: urls[0]), base: urls.count == 1 ? Out.base(of: urls[0]) : "Combined", ext: "pdf")
+        guard merged.write(to: out) else { throw WheelError("Couldn't write \(out.lastPathComponent)") }
+        return out
+    }
+
+    /// Compresses each file the way that suits it; skips kinds that can't be compressed.
+    static func compress(_ urls: [URL]) async throws -> String {
+        var done = 0, skipped = 0
+        for (i, u) in urls.enumerated() {
+            try Task.checkCancellation()
+            try await JobProgress.$muted.withValue(true) {
+                switch FileKind.kind(of: u) {
+                case .image: _ = try await bg { try Img.compress(u) }; done += 1
+                case .video: _ = try await AV.export(u, preset: AVAssetExportPreset960x540, type: .mp4, ext: "mp4", suffix: "-compressed"); done += 1
+                case .audio: _ = try await Audio.afconvert(u, ext: "m4a", suffix: "-compressed", args: ["-f", "m4af", "-d", "aac", "-b", "96000"]); done += 1
+                case .pdf: _ = try PDFTools.compress(u); done += 1
+                default: skipped += 1
+                }
+            }
+            JobProgress.report(Double(i + 1) / Double(urls.count))
+        }
+        if done == 0 { throw WheelError("None of these files can be compressed.") }
+        return "Compressed \(done) file\(done == 1 ? "" : "s")" + (skipped > 0 ? ", skipped \(skipped)" : "")
+    }
 }

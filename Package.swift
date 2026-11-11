@@ -8,7 +8,7 @@ let package = Package(
         .executableTarget(
             name: "eWheel",
             path: "Sources/eWheel",
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            swiftSettings: [.swiftLanguageMode(.v6)]
         )
     ]
 )

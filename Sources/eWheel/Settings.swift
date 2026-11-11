@@ -14,7 +14,7 @@ enum Credits {
 @MainActor
 final class SettingsWindow {
     static let shared = SettingsWindow()
-    static let size = CGSize(width: 540, height: 820)
+    static let size = CGSize(width: 540, height: 870)
     private var window: NSWindow?
 
     func show() {
@@ -27,7 +27,7 @@ final class SettingsWindow {
             w.titleVisibility = .hidden
             w.isMovableByWindowBackground = true
             w.isReleasedWhenClosed = false
-            w.backgroundColor = Brand.hex(Brand.dBackground)
+            w.backgroundColor = NSColor(name: nil) { $0.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? Brand.hex(Brand.dBackground) : Brand.hex(Brand.lBackground) }
             w.contentViewController = NSHostingController(rootView: SettingsView())
             // Come to whichever desktop (Space) you're on, instead of staying on the old one.
             w.collectionBehavior = [.moveToActiveSpace]
@@ -58,18 +58,13 @@ final class SettingsWindow {
     }
 }
 
-/// The window's own backdrop: deep Echoro Green with soft mint light, so the glass has something to refract.
+/// The window's own backdrop: the Echoro kit's Backdrop (deep green in dark mode, soft mint in light),
+/// so the glass has something to refract.
 struct SettingsBackground: View {
     var body: some View {
-        ZStack {
-            LinearGradient(colors: [Brand.color(Brand.dPrimaryContainer), Echoro.green, Brand.color(Brand.dBackground)],
-                           startPoint: .top, endPoint: .bottom)
-            Circle().fill(Echoro.mint.opacity(0.20)).frame(width: 360).blur(radius: 80).offset(x: 200, y: -300)
-            Circle().fill(Brand.color(Brand.dPrimary, 0.30)).frame(width: 320).blur(radius: 80).offset(x: -210, y: 60)
-            Circle().fill(Echoro.mint.opacity(0.10)).frame(width: 300).blur(radius: 70).offset(x: 160, y: 330)
-        }
-        .frame(width: SettingsWindow.size.width, height: SettingsWindow.size.height)
-        .clipped()
+        Backdrop()
+            .frame(width: SettingsWindow.size.width, height: SettingsWindow.size.height)
+            .clipped()
     }
 }
 
@@ -81,11 +76,15 @@ struct SettingsView: View {
     @AppStorage("revealAfter") private var revealAfter = false
     @AppStorage("hoverSound") private var hoverSound = true
     @AppStorage("autoUpdateCheck") private var autoUpdateCheck = true
+    @AppStorage(Appearance.key) private var appearance = "system"
+    @AppStorage("targetMB") private var targetMB = 2
+    @AppStorage("resizeWidth") private var resizeWidth = 1920
     private let login = LoginItem()
 
     var body: some View {
         ZStack(alignment: .top) {
             SettingsBackground()
+            ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 18) {
                 header
                 section("Wheel keys", footer: "Start dragging a file, then tap a key. Choosing a key another wheel uses swaps them.") {
@@ -101,7 +100,24 @@ struct SettingsView: View {
                         GlassSwitch(isOn: $revealAfter)
                     }
                 }
+                section("Tools", footer: "Used by the \u{2264} MB and width segments of the image Tools wheel.") {
+                    row(icon: "scalemass.fill", shade: Brand.color(Brand.forest), title: "Compress to size") {
+                        segmented([1, 2, 5, 10].map { ("\($0) MB", "\($0)") },
+                                  selection: Binding(get: { "\(targetMB)" }, set: { targetMB = Int($0) ?? 2 }))
+                    }
+                    divider
+                    row(icon: "arrow.left.and.right", shade: Brand.color(Brand.lSecondary), title: "Resize width") {
+                        segmented([1280, 1920, 2560, 3840].map { ("\($0)", "\($0)") },
+                                  selection: Binding(get: { "\(resizeWidth)" }, set: { resizeWidth = Int($0) ?? 1920 }))
+                    }
+                }
                 section("General", footer: nil) {
+                    row(icon: "circle.lefthalf.filled", shade: Echoro.green, title: "Appearance") {
+                        segmented([("System", "system"), ("Light", "light"), ("Dark", "dark")], selection: $appearance) {
+                            Appearance.apply()
+                        }
+                    }
+                    divider
                     row(icon: "speaker.wave.2.fill", shade: Brand.color(Brand.dPrimaryContainer), title: "Click sound on hover") {
                         GlassSwitch(isOn: $hoverSound)
                     }
@@ -122,10 +138,11 @@ struct SettingsView: View {
             }
             .padding(.horizontal, 26)
             .padding(.top, 40)
+            .padding(.bottom, 20)
+            }
         }
         .frame(width: SettingsWindow.size.width, height: SettingsWindow.size.height)
         .foregroundStyle(Color.ink)
-        .environment(\.colorScheme, .dark)
     }
 
     // MARK: Header
@@ -203,16 +220,16 @@ struct SettingsView: View {
         return Button { withAnimation(.snappy(duration: 0.2)) { choose(k.rawValue, for: mode) } } label: {
             Text(k.glyph)
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(on ? Echoro.deep : Color.ink)
+                .foregroundStyle(on ? Color.onPick : Color.ink)
                 .frame(width: 34, height: 30)
                 .background {
                     if on {
-                        RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Echoro.mint)
-                            .shadow(color: Echoro.mint.opacity(0.45), radius: 6)
+                        RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color.pick)
+                            .shadow(color: Color.pick.opacity(0.45), radius: 6)
                     }
                 }
                 .echoGlass(RoundedRectangle(cornerRadius: 9, style: .continuous),
-                           tint: on ? GlassTint.selected : .white.opacity(0.04), interactive: true)
+                           tint: on ? GlassTint.picked : Color.ink.opacity(0.04), interactive: true)
         }
         .buttonStyle(.plain)
         .help("\(k.name) opens \(mode.title)")
@@ -221,23 +238,31 @@ struct SettingsView: View {
     // MARK: Save location
 
     private var locationPicker: some View {
+        segmented(SaveLocation.allCases.map { ($0.short, $0.rawValue) }, selection: $saveLocation)
+    }
+
+    /// Capsule segmented control: glass track, picked option on a `pick` pill.
+    private func segmented(_ options: [(String, String)], selection: Binding<String>, onPick: @escaping () -> Void = {}) -> some View {
         HStack(spacing: 2) {
-            ForEach(SaveLocation.allCases) { loc in
-                let on = saveLocation == loc.rawValue
-                Button { withAnimation(.snappy(duration: 0.2)) { saveLocation = loc.rawValue } } label: {
-                    Text(loc.short)
+            ForEach(options, id: \.1) { label, value in
+                let on = selection.wrappedValue == value
+                Button {
+                    withAnimation(.snappy(duration: 0.2)) { selection.wrappedValue = value }
+                    onPick()
+                } label: {
+                    Text(label)
                         .font(.system(size: 11.5, weight: .semibold, design: .rounded))
-                        .foregroundStyle(on ? Echoro.deep : Color.ink)
+                        .foregroundStyle(on ? Color.onPick : Color.ink)
                         .padding(.horizontal, 11)
                         .frame(height: 26)
-                        .background { if on { Capsule().fill(Echoro.mint) } }
+                        .background { if on { Capsule().fill(Color.pick) } }
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(3)
-        .echoGlass(Capsule(), tint: .white.opacity(0.04))
+        .echoGlass(Capsule(), tint: Color.ink.opacity(0.04))
     }
 
     // MARK: Footer

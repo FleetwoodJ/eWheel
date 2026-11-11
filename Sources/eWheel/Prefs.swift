@@ -37,6 +37,10 @@ enum Prefs {
     /// Click sound when hovering wheel segments (on by default).
     static var hoverSound: Bool { d.object(forKey: "hoverSound") == nil ? true : d.bool(forKey: "hoverSound") }
 
+    /// Settings → Tools: the "Compress to size" target in MB, and the "Resize width" in pixels.
+    static var targetMB: Int { let v = d.integer(forKey: "targetMB"); return v > 0 ? v : 2 }
+    static var resizeWidth: Int { let v = d.integer(forKey: "resizeWidth"); return v > 0 ? v : 1920 }
+
     /// Check GitHub for a newer eWheel about once a day (on by default).
     static var autoUpdateCheck: Bool { d.object(forKey: "autoUpdateCheck") == nil ? true : d.bool(forKey: "autoUpdateCheck") }
 

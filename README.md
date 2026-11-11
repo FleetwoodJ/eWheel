@@ -43,6 +43,8 @@ Converting a file usually means one of two things: opening an app that's built f
 - Move onto a segment and let go. A soft click and a trackpad tap confirm each segment as you pass over it.
 - To cancel, let go in the middle of the wheel.
 - While it works, the menu-bar icon spins. It fills solid for a moment when the job is done. There are no pop-ups unless something goes wrong.
+- Long jobs, like a big video, show their progress in the menu ("Convert to MP4: Holiday.mov… 45%") with **Cancel**.
+- The menu lists your last five conversions. Click one to show it in Finder, or choose **Undo** to move the newest result to the Bin.
 
 ## Screenshots
 
@@ -64,19 +66,20 @@ Converting a file usually means one of two things: opening an app that's built f
 
 | Type | ⇧ Convert | ⌘ Tools |
 |---|---|---|
-| Images (JPG, PNG, HEIC, WebP, AVIF, TIFF, GIF, BMP, RAW…) | JPG · PNG · HEIC · WEBP\* · AVIF\* · TIFF · GIF · BMP · PDF | Compress · Half size · Rotate · Flip · Square crop · Mono · Strip metadata · Combine to PDF |
-| Video (MOV, MP4, M4V…) | MP4 · MOV · HEVC · 720p · GIF · M4A (audio) | Compress (540p) · Mute · Poster frame · ZIP |
-| Audio (WAV, MP3, M4A, AIFF, FLAC, CAF…) | M4A · WAV · AIFF · FLAC · ALAC · CAF | Compress · Mono · Voice memo · ZIP |
+| Images (JPG, PNG, HEIC, WebP, AVIF, TIFF, GIF, BMP, RAW…) | JPG · PNG · HEIC · WEBP\* · AVIF\* · TIFF · GIF · BMP · PDF | Compress · Compress to size (≤ 1–10 MB) · Resize to width · Rotate · Flip · Square crop · Mono · Strip metadata · Combine to PDF |
+| Video (MOV, MP4, M4V…) | MP4 · MOV · HEVC · 720p · GIF · M4A (audio) | Compress (540p) · Trim · Mute · Poster frame · ZIP |
+| Audio (WAV, MP3, M4A, AIFF, FLAC, CAF…) | M4A · WAV · AIFF · FLAC · ALAC · CAF | Compress · Trim · Mono · Voice memo · ZIP |
 | PDF | PNG · JPG (per page) · TXT · RTF | Compress · Merge · Split · Rotate · ZIP |
 | Documents (DOCX, DOC, RTF, ODT, HTML, TXT, Markdown) | PDF · DOCX · RTF · TXT · HTML · ODT · DOC | Word count · PDF · ZIP |
 | Data (CSV, TSV, JSON) | CSV · TSV · JSON | ZIP · TAR.GZ |
 | Subtitles (SRT, VTT) | SRT · VTT · TXT | ZIP · TAR.GZ |
 | Archives (ZIP, TAR, GZ, 7z, RAR, XZ…) | Extract · ZIP · TAR.GZ | ZIP · TAR.GZ |
+| Mixed selections (different kinds together) | Combine into one PDF (images and PDFs) · ZIP · TAR.GZ | Compress each file · Combine into one PDF · ZIP · TAR.GZ |
 | Folders and anything else | ZIP · TAR.GZ | ZIP · TAR.GZ |
 
 \* Shown only if your version of macOS can write that format.
 
-Several files at once are converted in parallel. MOV ⇄ MP4 copies the streams without re-encoding when it can.
+Several files at once are converted in parallel. MOV ⇄ MP4 and Trim copy the streams without re-encoding when they can. Trim opens a small window with Start and End sliders and a preview frame.
 
 **Not supported:** MP3 encoding (macOS has no MP3 encoder), Pages/Keynote/Numbers files, XLSX, and WebM/MKV video.
 
@@ -102,7 +105,8 @@ Everything runs locally, using ImageIO, AVFoundation, PDFKit, the AppKit text sy
 
 - **Wheel keys:** pick ⇧, ⌘, ⌃ or ⌥ for each wheel. Choosing a key another wheel uses swaps the two. **Restore Default Keys** sets them back to ⇧ Convert, ⌘ Tools, ⌥ Actions.
 - **Saving:** save new files with the original, in Downloads or on the Desktop, and optionally show them in Finder afterwards.
-- **General:** turn the hover click sound on or off, launch at login, and check for updates automatically.
+- **Tools:** the target for Compress to size (1, 2, 5 or 10 MB) and the width for Resize (1280, 1920, 2560 or 3840 px).
+- **General:** Appearance (System, Light or Dark), the hover click sound, launch at login, and automatic update checks.
 
 ## Build from source
 
@@ -143,6 +147,9 @@ Sources/eWheel/
   Converters.swift      image, video, audio, PDF, document, data, subtitle and archive converters, plus file actions
   StatusAnimator.swift  menu-bar icon animation while working
   Updater.swift         one-click updates from GitHub Releases
+  Jobs.swift            progress, Cancel, Recent conversions and Undo
+  Tools.swift           compress to size, resize to width, Trim window
+  EchoroBrand.swift     shared Echoro palette (from the Echoro Design Kit)
   Sound.swift           the hover click
   Render.swift          --render presentation images
   SelfTest.swift        --selftest conversion tests

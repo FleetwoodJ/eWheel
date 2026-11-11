@@ -48,7 +48,7 @@ struct EchoGlass<S: Shape>: ViewModifier {
                                                     startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.1)
                     }
                     .clipShape(shape)
-                    .shadow(color: .black.opacity(0.28), radius: 14, y: 7)
+                    .shadow(color: Brand.dynamic(dark: NSColor(white: 0, alpha: 0.28), light: Brand.hex(Brand.echoroGreen, 0.10)), radius: 14, y: 7)
                 }
             }
         } else {
@@ -63,12 +63,38 @@ extension View {
     }
 }
 
-// Two dark-scheme tokens eWheel needs beyond the shared EchoroBrand kit ("Echoro brand colours").
+// Tokens eWheel needs beyond the shared EchoroBrand kit ("Echoro brand colours"). All follow light/dark mode.
 extension Color {
+    /// "Picked" fill (selected segment, key, switch): mint #C5ECD2 on dark, Echoro Green on light,
+    /// because mint all but disappears on pale glass.
+    static let pick = Brand.dynamic(dark: Brand.hex(Brand.lPrimaryContainer), light: Brand.hex(Brand.echoroGreen))
+    /// Text and icons on `pick`: #002112 on dark, white on light.
+    static let onPick = Brand.dynamic(dark: Brand.hex(Brand.lOnPrimaryContainer), light: Brand.hex(0xFFFFFF))
+    /// Error pop-up: container #93000A / #FFDAD6 with error #FFB4AB / #BA1A1A.
+    static let errorFill = Brand.dynamic(dark: Brand.hex(0x93000A), light: Brand.hex(0xFFDAD6))
+    static let errorInk = Brand.dynamic(dark: Brand.hex(Brand.dError), light: Brand.hex(Brand.lError))
+    /// Soft shadow under labels on dark glass; none on light glass.
+    static let labelShadow = Brand.dynamic(dark: NSColor(white: 0, alpha: 0.35), light: .clear)
     /// Secondary text: #C0C9C0 on dark, #404942 on light.
     static let inkSecondary = Brand.dynamic(dark: Brand.hex(0xC0C9C0), light: Brand.hex(0x404942))
     /// Divider: #404942 on dark, #C0C9C0 on light.
     static let divider = Brand.dynamic(dark: Brand.hex(0x404942), light: Brand.hex(0xC0C9C0))
+}
+
+extension GlassTint {
+    /// Glass tint for a picked wheel segment, matching `Color.pick`.
+    static let picked = Brand.dynamic(dark: Brand.hex(Brand.lPrimaryContainer, 0.88), light: Brand.hex(Brand.echoroGreen, 0.88))
+}
+
+extension Appearance {
+    /// Applies Settings → Appearance (System / Light / Dark) to every eWheel window and panel.
+    @MainActor static func apply() {
+        switch UserDefaults.standard.string(forKey: key) ?? "system" {
+        case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
+        case "light": NSApp.appearance = NSAppearance(named: .aqua)
+        default: NSApp.appearance = nil
+        }
+    }
 }
 
 /// Liquid-Glass-style switch: glass track, white knob, mint when on.
@@ -80,7 +106,7 @@ struct GlassSwitch: View {
         Button { withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { isOn.toggle() } } label: {
             ZStack(alignment: isOn ? .trailing : .leading) {
                 Capsule()
-                    .fill(isOn ? Echoro.mint : .white.opacity(0.14))
+                    .fill(isOn ? Color.pick : Color.ink.opacity(0.14))
                     .overlay(Capsule().stroke(.white.opacity(isOn ? 0.5 : 0.18), lineWidth: 0.8))
                     .frame(width: 44, height: 26)
                 Capsule()

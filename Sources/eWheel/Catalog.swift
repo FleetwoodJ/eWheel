@@ -12,6 +12,15 @@ struct WheelItem: Identifiable {
     let run: @MainActor ([URL]) async throws -> String
     /// Show the result in a pop-up (only for results that are information, like a word count).
     var announces = false
+    /// Opens a window first (Trim): the job only counts as working once the user confirms.
+    var interactive = false
+
+    init(title: String, symbol: String, detail: String, run: @escaping @MainActor ([URL]) async throws -> String) {
+        self.title = title
+        self.symbol = symbol
+        self.detail = detail
+        self.run = run
+    }
 }
 
 enum FileKind: Equatable {
@@ -119,7 +128,16 @@ enum Catalog {
                 item("ZIP", "doc.zipper", "Repack as ZIP") { try await each($0) { try await Arch.repack($0, as: "zip") } },
                 item("TAR.GZ", "shippingbox", "Repack as TAR.GZ") { try await each($0) { try await Arch.repack($0, as: "tar.gz") } },
             ].filter { !($0.title == "ZIP" && exts == ["zip"]) }
-        case .folder, .other, .mixed:
+        case .mixed:
+            var items: [WheelItem] = []
+            if Mixed.canCombine(urls) {
+                items.append(item("PDF", "doc.on.doc", "Combine into one PDF") { "Saved " + (try await Mixed.combinePDF($0)).lastPathComponent })
+            }
+            return items + [
+                item("ZIP", "doc.zipper", "Compress to ZIP") { "Saved " + (try await Arch.zip($0)).lastPathComponent },
+                item("TAR.GZ", "shippingbox", "Compress to TAR.GZ") { "Saved " + (try await Arch.tgz($0)).lastPathComponent },
+            ]
+        case .folder, .other:
             return [
                 item("ZIP", "doc.zipper", "Compress to ZIP") { "Saved " + (try await Arch.zip($0)).lastPathComponent },
                 item("TAR.GZ", "shippingbox", "Compress to TAR.GZ") { "Saved " + (try await Arch.tgz($0)).lastPathComponent },
@@ -135,7 +153,14 @@ enum Catalog {
         case .image:
             return [
                 item("COMPRESS", "arrow.down.right.and.arrow.up.left", "Compress image") { try await each($0) { u in try await bg { try Img.compress(u) } } },
-                item("HALF SIZE", "arrow.down.forward.and.arrow.up.backward", "Resize to 50%") { try await each($0) { u in try await bg { try Img.transform(u, suffix: "-half", Img.half) } } },
+                item("≤ \(Prefs.targetMB) MB", "scalemass", "Compress to under \(Prefs.targetMB) MB") { urls in
+                    let mb = Prefs.targetMB
+                    return try await each(urls) { u in try await bg { try Img.compressToSize(u, maxBytes: mb * 1_000_000, label: "\(mb) MB") } }
+                },
+                item("\(Prefs.resizeWidth) W", "arrow.left.and.right", "Resize to \(Prefs.resizeWidth) px wide") { urls in
+                    let w = Prefs.resizeWidth
+                    return try await each(urls) { u in try await bg { try Img.transform(u, suffix: "-\(w)w", Img.resize(toWidth: w)) } }
+                },
                 item("ROTATE", "rotate.right", "Rotate 90° clockwise") { try await each($0) { u in try await bg { try Img.transform(u, suffix: "-rotated", Img.rotate) } } },
                 item("FLIP", "arrow.left.and.right.righttriangle.left.righttriangle.right", "Flip horizontally") { try await each($0) { u in try await bg { try Img.transform(u, suffix: "-flipped", Img.flip) } } },
                 item("SQUARE", "crop", "Crop to centre square") { try await each($0) { u in try await bg { try Img.transform(u, suffix: "-square", Img.square) } } },
@@ -146,6 +171,12 @@ enum Catalog {
         case .video:
             return [
                 item("COMPRESS", "arrow.down.right.and.arrow.up.left", "Compress video (540p)") { try await each($0) { try await AV.export($0, preset: AVAssetExportPreset960x540, type: .mp4, ext: "mp4", suffix: "-compressed") } },
+                item("TRIM", "timeline.selection", "Trim…") { urls in
+                    guard urls.count == 1 else { throw WheelError("Trim works on one file at a time.") }
+                    guard let range = try await TrimPanel.ask(for: urls[0]) else { return "Trim cancelled" }
+                    JobProgress.begin()
+                    return "Saved " + (try await AV.trim(urls[0], range: range)).lastPathComponent
+                }.interactiveItem,
                 item("MUTE", "speaker.slash", "Remove audio") { try await each($0) { try await AV.mute($0) } },
                 item("POSTER", "photo", "Save first frame") { try await each($0) { try await AV.poster($0) } },
                 zip,
@@ -153,6 +184,12 @@ enum Catalog {
         case .audio:
             return [
                 item("COMPRESS", "arrow.down.right.and.arrow.up.left", "Compress (AAC 96 kbps)") { try await each($0) { try await Audio.afconvert($0, ext: "m4a", suffix: "-compressed", args: ["-f", "m4af", "-d", "aac", "-b", "96000"]) } },
+                item("TRIM", "timeline.selection", "Trim…") { urls in
+                    guard urls.count == 1 else { throw WheelError("Trim works on one file at a time.") }
+                    guard let range = try await TrimPanel.ask(for: urls[0]) else { return "Trim cancelled" }
+                    JobProgress.begin()
+                    return "Saved " + (try await AV.trim(urls[0], range: range)).lastPathComponent
+                }.interactiveItem,
                 item("MONO", "speaker.wave.1", "Mix down to mono") { try await each($0) { try await Audio.afconvert($0, ext: "m4a", suffix: "-mono", args: ["-f", "m4af", "-d", "aac", "-b", "128000", "-c", "1"]) } },
                 item("VOICE", "mic", "Voice memo (AAC 48 kbps mono)") { try await each($0) { try await Audio.afconvert($0, ext: "m4a", suffix: "-voice", args: ["-f", "m4af", "-d", "aac", "-b", "48000", "-c", "1", "-r", "127"]) } },
                 zip,
@@ -171,7 +208,16 @@ enum Catalog {
                 item("PDF", "doc.richtext", "Convert to PDF") { try await each($0) { try Doc.convert($0, ext: "pdf") } },
                 zip,
             ]
-        case .data, .subtitle, .archive, .folder, .other, .mixed:
+        case .mixed:
+            var items: [WheelItem] = []
+            if Mixed.kinds(urls).contains(where: Mixed.compressible) {
+                items.append(item("COMPRESS", "arrow.down.right.and.arrow.up.left", "Compress each file") { try await Mixed.compress($0) })
+            }
+            if Mixed.canCombine(urls) {
+                items.append(item("PDF", "doc.on.doc", "Combine into one PDF") { "Saved " + (try await Mixed.combinePDF($0)).lastPathComponent })
+            }
+            return items + [zip, item("TAR.GZ", "shippingbox", "Compress to TAR.GZ") { "Saved " + (try await Arch.tgz($0)).lastPathComponent }]
+        case .data, .subtitle, .archive, .folder, .other:
             return [zip,
                     item("TAR.GZ", "shippingbox", "Compress to TAR.GZ") { "Saved " + (try await Arch.tgz($0)).lastPathComponent }]
         }
@@ -188,18 +234,22 @@ enum Catalog {
 /// Runs `f` for every file and summarises what was written.
 /// Files run in parallel, up to one per CPU core.
 @MainActor
-func each(_ urls: [URL], _ f: @escaping (URL) async throws -> URL) async throws -> String {
+func each(_ urls: [URL], _ f: @escaping @Sendable @MainActor (URL) async throws -> URL) async throws -> String {
     let limit = max(2, ProcessInfo.processInfo.activeProcessorCount)
+    // One file reports its own progress (e.g. a video export); several report files done.
+    let quiet = urls.count > 1
     var outs: [URL] = []
     try await withThrowingTaskGroup(of: URL.self) { group in
         var pending = urls.makeIterator()
         for _ in 0..<limit {
             guard let u = pending.next() else { break }
-            group.addTask { try await f(u) }
+            group.addTask { try await JobProgress.$muted.withValue(quiet) { try await f(u) } }
         }
         while let out = try await group.next() {
             outs.append(out)
-            if let u = pending.next() { group.addTask { try await f(u) } }
+            if quiet { JobProgress.report(Double(outs.count) / Double(urls.count)) }
+            try Task.checkCancellation()
+            if let u = pending.next() { group.addTask { try await JobProgress.$muted.withValue(quiet) { try await f(u) } } }
         }
     }
     return outs.count == 1 ? "Saved \(outs[0].lastPathComponent)" : "Saved \(outs.count) files"
@@ -242,7 +292,9 @@ enum Out {
     }
 
     /// Thread-safe: parallel jobs never get the same name.
-    static func url(in dir: URL, base: String, ext: String) -> URL {
+    /// `record: false` for paths that aren't new files eWheel made (Move's destinations), so
+    /// Undo and cancel-cleanup can never touch them.
+    static func url(in dir: URL, base: String, ext: String, record: Bool = true) -> URL {
         lock.withLock {
             var candidate = dir.appendingPathComponent(ext.isEmpty ? base : "\(base).\(ext)")
             var n = 2
@@ -251,7 +303,7 @@ enum Out {
                 n += 1
             }
             claimed.insert(candidate)
-            _produced.append(candidate)
+            if record { _produced.append(candidate) }
             return candidate
         }
     }
@@ -278,4 +330,5 @@ enum Out {
 
 extension WheelItem {
     var announcing: WheelItem { var c = self; c.announces = true; return c }
+    var interactiveItem: WheelItem { var c = self; c.interactive = true; return c }
 }

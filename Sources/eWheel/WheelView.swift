@@ -49,7 +49,6 @@ struct WheelView: View {
         }
         .scaleEffect(model.shown ? 1 : 0.82, anchor: .init(x: 0.5, y: wheelMidY))
         .opacity(model.shown ? 1 : 0)
-        .environment(\.colorScheme, .dark)
     }
 
     private var wheel: some View {
@@ -64,7 +63,7 @@ struct WheelView: View {
                         Color.clear
                             .frame(width: d, height: d)
                             .contentShape(shape)
-                            .echoGlass(shape, tint: on ? GlassTint.selected : GlassTint.clear, interactive: on)
+                            .echoGlass(shape, tint: on ? GlassTint.picked : GlassTint.clear, interactive: on)
                             .scaleEffect(on ? 1.06 : 1)
                     }
                     Color.clear
@@ -87,8 +86,8 @@ struct WheelView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
-                .foregroundStyle(on ? Echoro.deep : Color.ink)
-                .shadow(color: .black.opacity(on ? 0 : 0.35), radius: 2, y: 1)
+                .foregroundStyle(on ? Color.onPick : Color.ink)
+                .shadow(color: on ? .clear : Color.labelShadow, radius: 2, y: 1)
                 .frame(width: 76)
                 .offset(x: n == 1 ? 0 : cos(a) * r, y: n == 1 ? -r : sin(a) * r)
                 .scaleEffect(on ? 1.08 : 1)
@@ -111,9 +110,9 @@ struct WheelView: View {
             } else {
                 Text(model.mode.key)
                     .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .foregroundStyle(Echoro.deep)
+                    .foregroundStyle(Color.onPick)
                     .frame(width: 34, height: 34)
-                    .background(Circle().fill(Echoro.mint))
+                    .background(Circle().fill(Color.pick))
                 Text(model.items.isEmpty ? "Nothing here" : model.mode.title.uppercased())
                     .font(.system(size: 9.5, weight: .bold, design: .rounded)).tracking(1)
                 Text(model.subject)
@@ -123,7 +122,7 @@ struct WheelView: View {
             }
         }
         .foregroundStyle(Color.ink)
-        .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+        .shadow(color: Color.labelShadow, radius: 2, y: 1)
         .frame(width: Geo.inner * 2 - 26)
         .allowsHitTesting(false)
     }
@@ -137,10 +136,10 @@ struct WheelView: View {
                     Text(mode.key).font(.system(size: 13.5, weight: .bold, design: .rounded))
                     Text(mode.title).font(.system(size: 12, weight: .semibold, design: .rounded))
                 }
-                .foregroundStyle(on ? Echoro.deep : Color.ink)
+                .foregroundStyle(on ? Color.onPick : Color.ink)
                 .frame(width: 112, height: 32)
                 .background {
-                    if on { Capsule().fill(Echoro.mint).shadow(color: .black.opacity(0.2), radius: 3, y: 1) }
+                    if on { Capsule().fill(Color.pick).shadow(color: .black.opacity(0.2), radius: 3, y: 1) }
                 }
             }
         }
@@ -207,9 +206,9 @@ struct ToastView: View {
         HStack(spacing: 12) {
             Image(systemName: symbol)
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(isError ? Brand.color(Brand.dError) : Echoro.deep)
+                .foregroundStyle(isError ? Color.errorInk : Color.onPick)
                 .frame(width: 34, height: 34)
-                .background(Circle().fill(isError ? Brand.color(0x93000A) : Echoro.mint))
+                .background(Circle().fill(isError ? Color.errorFill : Color.pick))
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -226,7 +225,6 @@ struct ToastView: View {
         .padding(.vertical, 10)
         .echoGlass(Capsule(), tint: GlassTint.dense)
         .padding(10)
-        .environment(\.colorScheme, .dark)
         .fixedSize()
     }
 }

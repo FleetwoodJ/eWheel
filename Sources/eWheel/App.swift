@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 import SwiftUI
 
 /// eWheel — a free, offline conversion wheel for macOS.
@@ -14,9 +15,43 @@ struct Main {
         d.set(true, forKey: "migratedFromJfleetwood")
     }
 
+    /// The 1.2.0 ID change switched off "Launch at login" for anyone who had it on, without a word.
+    /// Once, if the old ID's settings are still here and it's off, ask whether to turn it back on;
+    /// then remove the old settings.
+    @MainActor static func offerLoginItemAfterIDChange() {
+        let d = UserDefaults.standard
+        let oldID = "com.jfleetwood.ewheel"
+        guard !d.bool(forKey: "loginCheckAfterIDChange"),
+              UserDefaults(suiteName: oldID)?.persistentDomain(forName: oldID) != nil else { return }
+        d.set(true, forKey: "loginCheckAfterIDChange")
+        defer { d.removePersistentDomain(forName: oldID) }
+        guard SMAppService.mainApp.status != .enabled else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        let a = NSAlert()
+        a.icon = NSApp.applicationIconImage
+        a.messageText = "Start eWheel when you log in?"
+        a.informativeText = "eWheel 1.2.0 changed its app identity, which switched off \u{201C}Launch at login\u{201D} for anyone who had it on. Would you like eWheel to start automatically again? You can change this any time in Settings."
+        a.addButton(withTitle: "Turn On")
+        a.addButton(withTitle: "Not Now")
+        if a.runModal() == .alertFirstButtonReturn {
+            do { try SMAppService.mainApp.register() } catch {
+                Log.wheel.error("couldn't turn on launch at login: \(error.localizedDescription)")
+            }
+        }
+        Log.wheel.notice("launch-at-login check after ID change: now \(SMAppService.mainApp.status == .enabled ? "on" : "off")")
+    }
+
     @MainActor static func main() {
         migrateSettings()
         let args = CommandLine.arguments
+        if let i = args.firstIndex(of: "--render-trim"), args.count > i + 2 {
+            Render.trimPreview(file: args[i + 1], out: args[i + 2])
+            return
+        }
+        if let i = args.firstIndex(of: "--render-light"), args.count > i + 1 {
+            Render.start(dir: args[i + 1], light: true)
+            return
+        }
         if let i = args.firstIndex(of: "--render"), args.count > i + 1 {
             Render.start(dir: args[i + 1])
             return
@@ -43,10 +78,13 @@ struct Main {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
+    private var progressItem: NSMenuItem?
+    private var menuTimer: Timer?
     let controller = WheelController()
     var launchFile: URL?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Appearance.apply()
         installMainMenu()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = Self.statusIcon()
@@ -54,6 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Updater.shared.status = controller.status
         Updater.shared.onChange = { [weak self] in self?.controller.status?.badge = Updater.shared.available != nil }
         Updater.shared.start()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { Main.offerLoginItemAfterIDChange() }
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
@@ -74,11 +113,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             item.indentationLevel = indent
             menu.addItem(item)
         }
+        if let job = Job.current, job.began {
+            let working = NSMenuItem(title: job.menuTitle, action: nil, keyEquivalent: "")
+            working.isEnabled = false
+            menu.addItem(working)
+            progressItem = working
+            let cancel = NSMenuItem(title: "Cancel", action: #selector(cancelJob), keyEquivalent: ".")
+            cancel.target = self
+            cancel.indentationLevel = 1
+            menu.addItem(cancel)
+            menu.addItem(.separator())
+        } else {
+            progressItem = nil
+        }
         status("eWheel is ready")
         status(Prefs.keySummary, indent: 1)
         status("Saving to: \(Prefs.saveLocation.title.lowercased())", indent: 1)
         if let update = Updater.shared.available { status("Update available: eWheel \(update.version)", indent: 1) }
         menu.addItem(.separator())
+
+        History.shared.prune()
+        if !History.shared.entries.isEmpty {
+            status("Recent")
+            for (i, entry) in History.shared.entries.enumerated() {
+                let item = NSMenuItem(title: entry.menuTitle, action: #selector(revealRecent(_:)), keyEquivalent: "")
+                item.target = self
+                item.tag = i
+                item.indentationLevel = 1
+                item.toolTip = "Show in Finder"
+                menu.addItem(item)
+            }
+            let undo = NSMenuItem(title: "Undo \u{201C}\(History.shared.entries[0].detail)\u{201D}", action: #selector(undoLast), keyEquivalent: "z")
+            undo.target = self
+            undo.toolTip = "Moves the newest result to the Bin"
+            menu.addItem(undo)
+            menu.addItem(.separator())
+        }
 
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
@@ -94,6 +164,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(about)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit eWheel", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+    }
+
+    // Keep the progress line live while the menu is open.
+    func menuWillOpen(_ menu: NSMenu) {
+        let t = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let item = self.progressItem else { return }
+                item.title = Job.current?.menuTitle ?? "Finished"
+            }
+        }
+        RunLoop.main.add(t, forMode: .common)
+        menuTimer = t
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        menuTimer?.invalidate()
+        menuTimer = nil
+    }
+
+    @objc private func cancelJob() { Job.current?.cancel() }
+
+    @objc private func revealRecent(_ sender: NSMenuItem) { History.shared.reveal(sender.tag) }
+
+    @objc private func undoLast() {
+        Task { @MainActor in
+            do { _ = try await History.shared.undoLast() } catch {
+                Toast.shared.show(title: "Couldn't undo", detail: error.localizedDescription,
+                                  symbol: "exclamationmark.circle", at: nil, duration: 4)
+            }
+        }
     }
 
     // Wait for the menu to finish closing: activating while it is still tracking is often ignored.
