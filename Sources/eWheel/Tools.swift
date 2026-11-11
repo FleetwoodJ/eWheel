@@ -168,16 +168,17 @@ enum TrimPanel {
                                     let end = CMTime(seconds: model.end, preferredTimescale: 600)
                                     finish?(CMTimeRange(start: start, end: end))
                                 })
-            let w = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 480, height: isVideo ? 470 : 250),
+            let size = CGSize(width: 480, height: isVideo ? 470 : 250)
+            let w = NSWindow(contentRect: CGRect(origin: .zero, size: size),
                              styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
             w.title = urls.count == 1 ? "Trim \(url.lastPathComponent)" : "Trim \(urls.count) files"
             w.titlebarAppearsTransparent = true
             w.isMovableByWindowBackground = true
             w.isReleasedWhenClosed = false
             w.collectionBehavior = [.moveToActiveSpace]
-            w.contentViewController = NSHostingController(rootView: view)
+            WindowSizing.attach(view, to: w, size: size)
             w.delegate = CloseWatcher.shared
-            w.center()
+            WindowSizing.place(w)
             window = w
             NSApp.activate(ignoringOtherApps: true)
             w.makeKeyAndOrderFront(nil)

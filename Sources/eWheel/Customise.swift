@@ -118,11 +118,11 @@ final class CustomiseWindow {
             w.isMovableByWindowBackground = true
             w.isReleasedWhenClosed = false
             w.collectionBehavior = [.moveToActiveSpace]
-            w.contentViewController = NSHostingController(rootView: CustomiseView(model: model))
-            w.center()
+            WindowSizing.attach(CustomiseView(model: model), to: w, size: Self.size)
             window = w
         }
         guard let w = window else { return }
+        if !w.isVisible || !w.isOnActiveSpace { WindowSizing.place(w) }
         NSApp.activate(ignoringOtherApps: true)
         w.makeKeyAndOrderFront(nil)
         w.orderFrontRegardless()

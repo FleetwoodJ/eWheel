@@ -28,34 +28,22 @@ final class SettingsWindow {
             w.isMovableByWindowBackground = true
             w.isReleasedWhenClosed = false
             w.backgroundColor = NSColor(name: nil) { $0.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? Brand.hex(Brand.dBackground) : Brand.hex(Brand.lBackground) }
-            w.contentViewController = NSHostingController(rootView: SettingsView())
+            WindowSizing.attach(SettingsView(), to: w, size: Self.size)
             // Come to whichever desktop (Space) you're on, instead of staying on the old one.
             w.collectionBehavior = [.moveToActiveSpace]
             window = w
         }
         guard let w = window else { return }
-        if !w.isVisible || !w.isOnActiveSpace { place(w) }
+        if !w.isVisible || !w.isOnActiveSpace { WindowSizing.place(w) }
         // A menu-bar app is never frontmost when its icon is clicked, and since macOS 14
         // `activate()` is only a request the system may decline. Ask firmly, and order the
         // window in front regardless, so it can never open hidden behind another app.
         NSApp.activate(ignoringOtherApps: true)
         w.makeKeyAndOrderFront(nil)
         w.orderFrontRegardless()
-        Log.wheel.notice("settings opened (eWheel active: \(NSApp.isActive), key: \(w.isKeyWindow))")
+        Log.wheel.notice("settings opened at \(NSStringFromRect(w.frame)) on screen \(NSStringFromRect(w.screen?.visibleFrame ?? .zero)) (eWheel active: \(NSApp.isActive))")
     }
 
-    /// Centres the window on the display the pointer is on (where you clicked the
-    /// menu-bar icon), rather than always on the main display, and keeps it on screen.
-    private func place(_ w: NSWindow) {
-        let mouse = NSEvent.mouseLocation
-        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(mouse, $0.frame, false) }) ?? NSScreen.main else { return }
-        let area = screen.visibleFrame
-        let size = w.frame.size
-        var origin = CGPoint(x: area.midX - size.width / 2, y: area.midY - size.height / 2)
-        origin.x = min(max(origin.x, area.minX), area.maxX - size.width)
-        origin.y = min(max(origin.y, area.minY), area.maxY - size.height)
-        w.setFrameOrigin(origin)
-    }
 }
 
 /// The window's own backdrop: the Echoro kit's Backdrop (deep green in dark mode, soft mint in light),

@@ -156,3 +156,29 @@ struct RenderSafeScroll<Content: View>: View {
         }
     }
 }
+
+/// Puts a SwiftUI view in one of eWheel's windows (Settings, Customise, Trim) and places it.
+@MainActor
+enum WindowSizing {
+    /// Gives the window its real size straight away, so it can be centred correctly before it
+    /// appears, and stops SwiftUI resizing it afterwards. The view runs under the transparent
+    /// title bar, so the backdrop and glass reach the top edge (no plain strip behind the buttons).
+    static func attach<V: View>(_ view: V, to window: NSWindow, size: CGSize) {
+        let host = NSHostingController(rootView: view.ignoresSafeArea())
+        host.sizingOptions = []
+        window.contentViewController = host
+        window.setContentSize(size)
+    }
+
+    /// Centres the window on the display the pointer is on (where you clicked), keeping it on screen.
+    static func place(_ w: NSWindow) {
+        let mouse = NSEvent.mouseLocation
+        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(mouse, $0.frame, false) }) ?? NSScreen.main else { return }
+        let area = screen.visibleFrame
+        let size = w.frame.size
+        var origin = CGPoint(x: area.midX - size.width / 2, y: area.midY - size.height / 2)
+        origin.x = min(max(origin.x, area.minX), area.maxX - size.width)
+        origin.y = min(max(origin.y, area.minY), area.maxY - size.height)
+        w.setFrameOrigin(origin)
+    }
+}
