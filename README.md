@@ -79,7 +79,7 @@ Converting a file usually means one of two things: opening an app that's built f
 
 \* Shown only if your version of macOS can write that format.
 
-Several files at once are converted in parallel. MOV ⇄ MP4 and Trim copy the streams without re-encoding when they can. Trim opens a small window with Start and End sliders and a preview frame.
+Several files at once are converted in parallel. MOV ⇄ MP4 and Trim copy the streams without re-encoding when they can. Trim opens a small window with Start and End sliders and a preview frame. Drag several files to trim them all with the same start and end.
 
 **Not supported:** MP3 encoding (macOS has no MP3 encoder), Pages/Keynote/Numbers files, XLSX, and WebM/MKV video.
 
@@ -106,7 +106,7 @@ Everything runs locally, using ImageIO, AVFoundation, PDFKit, the AppKit text sy
 - **Wheel keys:** pick ⇧, ⌘, ⌃ or ⌥ for each wheel. Choosing a key another wheel uses swaps the two. **Restore Default Keys** sets them back to ⇧ Convert, ⌘ Tools, ⌥ Actions.
 - **Wheel segments:** **Customise…** opens a window where you pick a wheel and file type, hide segments you never use, and star a favourite that always sits at the top. A mini preview shows the wheel as it will open, and **Reset** restores the defaults.
 - **Saving:** save new files with the original, in Downloads or on the Desktop, and optionally show them in Finder afterwards.
-- **Tools:** the target for Compress to size (1, 2, 5 or 10 MB) and the width for Resize (1280, 1920, 2560 or 3840 px).
+- **Tools:** image quality (High, Balanced or Small) for saving JPG, HEIC, WebP and AVIF; the target for Compress to size (1, 2, 5 or 10 MB); and the width for Resize (1280, 1920, 2560 or 3840 px).
 - **General:** Appearance (System, Light or Dark), the hover click sound, launch at login, and automatic update checks.
 
 ## Build from source

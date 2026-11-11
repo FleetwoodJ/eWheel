@@ -37,6 +37,16 @@ enum Prefs {
     /// Click sound when hovering wheel segments (on by default).
     static var hoverSound: Bool { d.object(forKey: "hoverSound") == nil ? true : d.bool(forKey: "hoverSound") }
 
+    /// Settings → Tools → Image quality, for JPG, HEIC, WebP and AVIF saves (Compress keeps its own).
+    /// High is what eWheel always used, so nothing changes until you pick another.
+    static var imageQuality: Double {
+        switch d.string(forKey: "imageQuality") {
+        case "balanced": 0.80
+        case "small": 0.65
+        default: 0.92
+        }
+    }
+
     /// Settings → Tools: the "Compress to size" target in MB, and the "Resize width" in pixels.
     static var targetMB: Int { let v = d.integer(forKey: "targetMB"); return v > 0 ? v : 2 }
     static var resizeWidth: Int { let v = d.integer(forKey: "resizeWidth"); return v > 0 ? v : 1920 }

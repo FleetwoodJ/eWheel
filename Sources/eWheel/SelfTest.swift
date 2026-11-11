@@ -150,6 +150,35 @@ enum SelfTest {
                 guard !Catalog.items(mode: .convert, kind: .image, urls: photo).isEmpty else { throw WheelError("wheel was emptied") }
                 return "PDF on top, BMP hidden, never empty"
             }),
+            ("image quality setting", {
+                let saved = UserDefaults.standard.string(forKey: "imageQuality")
+                defer { UserDefaults.standard.set(saved, forKey: "imageQuality") }
+                let png = samples.first { $0.pathExtension == "png" }!
+                func size(_ q: String) throws -> Int {
+                    UserDefaults.standard.set(q, forKey: "imageQuality")
+                    let out = try Img.transform(png, suffix: "-q\(q)", Img.mono)   // transform: always re-encodes
+                    let jpg = out.deletingPathExtension().appendingPathExtension("jpg")
+                    try Img.write(Img.load(out).0, to: jpg, type: .jpeg, quality: Prefs.imageQuality, meta: nil)
+                    return (try jpg.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+                }
+                let high = try size("high"), small = try size("small")
+                guard small < high else { throw WheelError("Small (\(small) B) isn't smaller than High (\(high) B)") }
+                return "High \(high / 1000) KB, Small \(small / 1000) KB"
+            }),
+            ("trim several files", {
+                let mov = samples.first { $0.pathExtension == "mov" }!
+                let copy = mov.deletingLastPathComponent().appendingPathComponent("second.mov")
+                try? FileManager.default.removeItem(at: copy)
+                try FileManager.default.copyItem(at: mov, to: copy)
+                let range = CMTimeRange(start: CMTime(seconds: 0.5, preferredTimescale: 600), end: CMTime(seconds: 1.5, preferredTimescale: 600))
+                let msg = try await each([mov, copy]) { u in try await AV.trim(u, range: range) }
+                for name in ["sample-trimmed 2.mov", "second-trimmed.mov"] {
+                    let u = mov.deletingLastPathComponent().appendingPathComponent(name)
+                    let d = try await AVURLAsset(url: u).load(.duration).seconds
+                    guard abs(d - 1.0) < 0.3 else { throw WheelError("\(name) is \(d)s") }
+                }
+                return msg + ", each 1.0s"
+            }),
             ("cancel stops a tool", {
                 let t0 = Date()
                 let task = Task { try await Shell.run("/bin/sleep", ["30"]) }

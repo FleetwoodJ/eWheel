@@ -79,6 +79,7 @@ struct SettingsView: View {
     @AppStorage(Appearance.key) private var appearance = "system"
     @AppStorage("targetMB") private var targetMB = 2
     @AppStorage("resizeWidth") private var resizeWidth = 1920
+    @AppStorage("imageQuality") private var imageQuality = "high"
     private let login = LoginItem()
 
     var body: some View {
@@ -112,7 +113,11 @@ struct SettingsView: View {
                         GlassSwitch(isOn: $revealAfter)
                     }
                 }
-                section("Tools", footer: "Used by the \u{2264} MB and width segments of the image Tools wheel.") {
+                section("Tools", footer: "Quality applies when eWheel saves JPG, HEIC, WebP or AVIF. Size and width are used by the image Tools wheel.") {
+                    row(icon: "camera.aperture", shade: Brand.color(Brand.dPrimaryContainer), title: "Image quality") {
+                        segmented([("High", "high"), ("Balanced", "balanced"), ("Small", "small")], selection: $imageQuality)
+                    }
+                    divider
                     row(icon: "scalemass.fill", shade: Brand.color(Brand.forest), title: "Compress to size") {
                         segmented([1, 2, 5, 10].map { ("\($0) MB", "\($0)") },
                                   selection: Binding(get: { "\(targetMB)" }, set: { targetMB = Int($0) ?? 2 }))

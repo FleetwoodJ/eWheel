@@ -282,6 +282,7 @@ extension Render {
         Task { @MainActor in
             let url = URL(fileURLWithPath: file)
             let model = TrimModel(url: url, isVideo: true)
+            model.count = 3   // review the several-files header
             model.duration = (try? await AVURLAsset(url: url).load(.duration).seconds) ?? 10
             model.start = model.duration * 0.15
             model.end = model.duration * 0.8

@@ -75,9 +75,9 @@ enum Img {
 
     static func convert(_ src: URL, to type: UTType, ext: String) throws -> URL {
         let out = Out.url(for: src, ext: ext)
-        if fastWrite(src, to: out, type: type, quality: 0.92) { return out }
+        if fastWrite(src, to: out, type: type, quality: Prefs.imageQuality) { return out }
         let (img, meta) = try load(src)
-        try write(img, to: out, type: type, quality: 0.92, meta: meta)
+        try write(img, to: out, type: type, quality: Prefs.imageQuality, meta: meta)
         return out
     }
 
@@ -114,7 +114,7 @@ enum Img {
         var ext = src.pathExtension
         if !writable.contains(type.identifier) { type = .png; ext = "png" }
         let out = Out.url(for: src, suffix: suffix, ext: ext)
-        try write(f(img), to: out, type: type, quality: 0.92, meta: keepMetadata ? meta : nil)
+        try write(f(img), to: out, type: type, quality: Prefs.imageQuality, meta: keepMetadata ? meta : nil)
         return out
     }
 
@@ -332,14 +332,14 @@ enum PDFTools {
         let doc = try open(src)
         if doc.pageCount == 1, let p = doc.page(at: 0) {
             let out = Out.url(for: src, ext: ext)
-            try Img.write(render(p), to: out, type: type, quality: 0.9, meta: nil)
+            try Img.write(render(p), to: out, type: type, quality: Prefs.imageQuality, meta: nil)
             return out
         }
         let dir = try Out.folder(for: src, suffix: " pages")
         for i in 0..<doc.pageCount {
             guard let p = doc.page(at: i) else { continue }
             let out = dir.appendingPathComponent("\(Out.base(of: src))-\(i + 1).\(ext)")
-            try Img.write(render(p), to: out, type: type, quality: 0.9, meta: nil)
+            try Img.write(render(p), to: out, type: type, quality: Prefs.imageQuality, meta: nil)
         }
         return dir
     }

@@ -91,6 +91,8 @@ extension AV {
 @MainActor @Observable
 final class TrimModel {
     let url: URL
+    /// How many files share this range (Trim several at once).
+    var count = 1
     var duration: Double = 0
     var start: Double = 0
     var end: Double = 0
@@ -135,12 +137,18 @@ enum TrimPanel {
     private static var finish: ((CMTimeRange?) -> Void)?
 
     /// Asks for the stretch to keep. Returns nil if the window is cancelled or closed.
-    static func ask(for url: URL) async throws -> CMTimeRange? {
-        let asset = AVURLAsset(url: url)
-        let duration = try await asset.load(.duration).seconds
-        guard duration.isFinite, duration > 0.2 else { throw WheelError("\(url.lastPathComponent) is too short to trim.") }
-        let isVideo = !(try await asset.loadTracks(withMediaType: .video)).isEmpty
+    /// With several files, one range applies to all of them; the sliders run up to the shortest one.
+    static func ask(for urls: [URL]) async throws -> CMTimeRange? {
+        guard let url = urls.first else { return nil }
+        var duration = Double.infinity
+        for u in urls {
+            let d = try await AVURLAsset(url: u).load(.duration).seconds
+            guard d.isFinite, d > 0.2 else { throw WheelError("\(u.lastPathComponent) is too short to trim.") }
+            duration = min(duration, d)
+        }
+        let isVideo = !(try await AVURLAsset(url: url).loadTracks(withMediaType: .video)).isEmpty
         let model = TrimModel(url: url, isVideo: isVideo)
+        model.count = urls.count
         model.duration = duration
         model.end = duration
         model.showFrame(at: 0)
@@ -162,7 +170,7 @@ enum TrimPanel {
                                 })
             let w = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 480, height: isVideo ? 470 : 250),
                              styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
-            w.title = "Trim \(url.lastPathComponent)"
+            w.title = urls.count == 1 ? "Trim \(url.lastPathComponent)" : "Trim \(urls.count) files"
             w.titlebarAppearsTransparent = true
             w.isMovableByWindowBackground = true
             w.isReleasedWhenClosed = false
@@ -195,10 +203,16 @@ struct TrimView: View {
         ZStack {
             Backdrop()
             VStack(spacing: 16) {
-                Text(model.url.lastPathComponent)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .lineLimit(1).truncationMode(.middle)
-                    .padding(.top, 26)
+                VStack(spacing: 2) {
+                    Text(model.count == 1 ? model.url.lastPathComponent : "\(model.url.lastPathComponent) and \(model.count - 1) more")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .lineLimit(1).truncationMode(.middle)
+                    if model.count > 1 {
+                        Text("The same start and end are used for every file.")
+                            .font(.system(size: 11.5, design: .rounded)).foregroundStyle(Color.inkSecondary)
+                    }
+                }
+                .padding(.top, 26)
                 if model.isVideo {
                     ZStack {
                         RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.black.opacity(0.25))

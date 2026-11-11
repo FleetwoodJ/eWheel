@@ -184,10 +184,9 @@ enum Catalog {
             return [
                 item("COMPRESS", "arrow.down.right.and.arrow.up.left", "Compress video (540p)") { try await each($0) { try await AV.export($0, preset: AVAssetExportPreset960x540, type: .mp4, ext: "mp4", suffix: "-compressed") } },
                 item("TRIM", "timeline.selection", "Trim…") { urls in
-                    guard urls.count == 1 else { throw WheelError("Trim works on one file at a time.") }
-                    guard let range = try await TrimPanel.ask(for: urls[0]) else { return "Trim cancelled" }
+                    guard let range = try await TrimPanel.ask(for: urls) else { return "Trim cancelled" }
                     JobProgress.begin()
-                    return "Saved " + (try await AV.trim(urls[0], range: range)).lastPathComponent
+                    return try await each(urls) { u in try await AV.trim(u, range: range) }
                 }.interactiveItem,
                 item("MUTE", "speaker.slash", "Remove audio") { try await each($0) { try await AV.mute($0) } },
                 item("POSTER", "photo", "Save first frame") { try await each($0) { try await AV.poster($0) } },
@@ -197,10 +196,9 @@ enum Catalog {
             return [
                 item("COMPRESS", "arrow.down.right.and.arrow.up.left", "Compress (AAC 96 kbps)") { try await each($0) { try await Audio.afconvert($0, ext: "m4a", suffix: "-compressed", args: ["-f", "m4af", "-d", "aac", "-b", "96000"]) } },
                 item("TRIM", "timeline.selection", "Trim…") { urls in
-                    guard urls.count == 1 else { throw WheelError("Trim works on one file at a time.") }
-                    guard let range = try await TrimPanel.ask(for: urls[0]) else { return "Trim cancelled" }
+                    guard let range = try await TrimPanel.ask(for: urls) else { return "Trim cancelled" }
                     JobProgress.begin()
-                    return "Saved " + (try await AV.trim(urls[0], range: range)).lastPathComponent
+                    return try await each(urls) { u in try await AV.trim(u, range: range) }
                 }.interactiveItem,
                 item("MONO", "speaker.wave.1", "Mix down to mono") { try await each($0) { try await Audio.afconvert($0, ext: "m4a", suffix: "-mono", args: ["-f", "m4af", "-d", "aac", "-b", "128000", "-c", "1"]) } },
                 item("VOICE", "mic", "Voice memo (AAC 48 kbps mono)") { try await each($0) { try await Audio.afconvert($0, ext: "m4a", suffix: "-voice", args: ["-f", "m4af", "-d", "aac", "-b", "48000", "-c", "1", "-r", "127"]) } },
