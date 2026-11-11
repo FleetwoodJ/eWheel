@@ -18,7 +18,7 @@ let body = CGRect(x: 100, y: 100, width: 824, height: 824)
 let bg = CGPath(roundedRect: body, cornerWidth: 185, cornerHeight: 185, transform: nil)
 ctx.saveGState()
 ctx.addPath(bg); ctx.clip()
-let grad = CGGradient(colorsSpace: space, colors: [rgb(0x1E5238), rgb(0x123524), rgb(0x0A2117)] as CFArray,
+let grad = CGGradient(colorsSpace: space, colors: [rgb(0x2B4E3B), rgb(0x123524), rgb(0x002112)] as CFArray,
                       locations: [0, 0.55, 1])!
 ctx.drawLinearGradient(grad, start: CGPoint(x: 512, y: 924), end: CGPoint(x: 512, y: 100), options: [])
 ctx.restoreGState()

@@ -27,7 +27,7 @@ final class SettingsWindow {
             w.titleVisibility = .hidden
             w.isMovableByWindowBackground = true
             w.isReleasedWhenClosed = false
-            w.backgroundColor = NSColor(red: 0x0A / 255, green: 0x21 / 255, blue: 0x17 / 255, alpha: 1)
+            w.backgroundColor = Brand.hex(Brand.dBackground)
             w.contentViewController = NSHostingController(rootView: SettingsView())
             // Come to whichever desktop (Space) you're on, instead of staying on the old one.
             w.collectionBehavior = [.moveToActiveSpace]
@@ -62,12 +62,11 @@ final class SettingsWindow {
 struct SettingsBackground: View {
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(red: 0x1A / 255, green: 0x4A / 255, blue: 0x33 / 255), Echoro.green,
-                                    Color(red: 0x06 / 255, green: 0x1A / 255, blue: 0x10 / 255)],
+            LinearGradient(colors: [Brand.color(Brand.dPrimaryContainer), Echoro.green, Brand.color(Brand.dBackground)],
                            startPoint: .top, endPoint: .bottom)
-            Circle().fill(Echoro.mint.opacity(0.22)).frame(width: 360).blur(radius: 80).offset(x: 200, y: -300)
-            Circle().fill(Echoro.sage.opacity(0.40)).frame(width: 320).blur(radius: 80).offset(x: -210, y: 60)
-            Circle().fill(Echoro.mint.opacity(0.12)).frame(width: 300).blur(radius: 70).offset(x: 160, y: 330)
+            Circle().fill(Echoro.mint.opacity(0.20)).frame(width: 360).blur(radius: 80).offset(x: 200, y: -300)
+            Circle().fill(Brand.color(Brand.dPrimary, 0.30)).frame(width: 320).blur(radius: 80).offset(x: -210, y: 60)
+            Circle().fill(Echoro.mint.opacity(0.10)).frame(width: 300).blur(radius: 70).offset(x: 160, y: 330)
         }
         .frame(width: SettingsWindow.size.width, height: SettingsWindow.size.height)
         .clipped()
@@ -96,14 +95,14 @@ struct SettingsView: View {
                     }
                 }
                 section("Saving", footer: nil) {
-                    row(icon: "folder.fill", shade: Echoro.sage, title: "Save converted files") { locationPicker }
+                    row(icon: "folder.fill", shade: Brand.color(Brand.forest), title: "Save converted files") { locationPicker }
                     divider
-                    row(icon: "magnifyingglass", shade: Color(red: 0.26, green: 0.50, blue: 0.37), title: "Show in Finder after converting") {
+                    row(icon: "magnifyingglass", shade: Brand.color(Brand.lSecondary), title: "Show in Finder after converting") {
                         GlassSwitch(isOn: $revealAfter)
                     }
                 }
                 section("General", footer: nil) {
-                    row(icon: "speaker.wave.2.fill", shade: Color(red: 0.20, green: 0.44, blue: 0.31), title: "Click sound on hover") {
+                    row(icon: "speaker.wave.2.fill", shade: Brand.color(Brand.dPrimaryContainer), title: "Click sound on hover") {
                         GlassSwitch(isOn: $hoverSound)
                     }
                     divider
@@ -111,13 +110,13 @@ struct SettingsView: View {
                         GlassSwitch(isOn: Binding(get: { login.enabled }, set: { login.set($0) }))
                     }
                     divider
-                    row(icon: "arrow.down.circle.fill", shade: Color(red: 0.22, green: 0.46, blue: 0.33),
+                    row(icon: "arrow.down.circle.fill", shade: Brand.color(Brand.forest),
                         title: "Check for updates automatically", subtitle: "Looks for a new version on GitHub about once a day") {
                         GlassSwitch(isOn: $autoUpdateCheck)
                     }
                 }
                 if let error = login.error {
-                    Text(error).font(.system(size: 11, design: .rounded)).foregroundStyle(.white.opacity(0.6))
+                    Text(error).font(.system(size: 11, design: .rounded)).foregroundStyle(Color.inkSecondary)
                 }
                 footerBar
             }
@@ -125,7 +124,7 @@ struct SettingsView: View {
             .padding(.top, 40)
         }
         .frame(width: SettingsWindow.size.width, height: SettingsWindow.size.height)
-        .foregroundStyle(.white)
+        .foregroundStyle(Color.ink)
         .environment(\.colorScheme, .dark)
     }
 
@@ -138,7 +137,7 @@ struct SettingsView: View {
                 .frame(width: 76, height: 76)
                 .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
             Text("eWheel").font(.system(size: 26, weight: .bold, design: .rounded))
-            Text(Credits.version).font(.system(size: 12, weight: .medium, design: .rounded)).foregroundStyle(.white.opacity(0.6))
+            Text(Credits.version).font(.system(size: 12, weight: .medium, design: .rounded)).foregroundStyle(Color.inkSecondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -149,7 +148,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 7) {
             Text(title.uppercased())
                 .font(.system(size: 11, weight: .semibold, design: .rounded)).tracking(0.8)
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(Color.inkSecondary)
                 .padding(.leading, 14)
             VStack(spacing: 0) { content() }
                 .padding(.vertical, 4)
@@ -157,14 +156,14 @@ struct SettingsView: View {
             if let footer {
                 Text(footer)
                     .font(.system(size: 11, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .foregroundStyle(Color.inkSecondary)
                     .padding(.horizontal, 14)
             }
         }
     }
 
     private var divider: some View {
-        Rectangle().fill(.white.opacity(0.09)).frame(height: 0.8).padding(.leading, 58)
+        Rectangle().fill(Color.divider).frame(height: 0.8).padding(.leading, 58)
     }
 
     private func row<C: View>(icon: String, shade: Color, title: String, subtitle: String? = nil,
@@ -174,7 +173,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.system(size: 13.5, weight: .medium, design: .rounded))
                 if let subtitle {
-                    Text(subtitle).font(.system(size: 11, design: .rounded)).foregroundStyle(.white.opacity(0.55))
+                    Text(subtitle).font(.system(size: 11, design: .rounded)).foregroundStyle(Color.inkSecondary)
                 }
             }
             Spacer(minLength: 8)
@@ -188,9 +187,9 @@ struct SettingsView: View {
 
     private func keyRow(_ mode: WheelMode) -> some View {
         let info: (String, Color, String) = switch mode {
-        case .convert: ("arrow.triangle.2.circlepath", Echoro.sage, "Change a file's format")
-        case .tools: ("wrench.and.screwdriver.fill", Color(red: 0.24, green: 0.48, blue: 0.35), "Compress, resize, rotate, merge")
-        case .actions: ("bolt.fill", Color(red: 0.16, green: 0.38, blue: 0.27), "AirDrop, copy, move, Terminal")
+        case .convert: ("arrow.triangle.2.circlepath", Brand.color(Brand.forest), "Change a file's format")
+        case .tools: ("wrench.and.screwdriver.fill", Brand.color(Brand.lSecondary), "Compress, resize, rotate, merge")
+        case .actions: ("bolt.fill", Brand.color(Brand.dPrimaryContainer), "AirDrop, copy, move, Terminal")
         }
         return row(icon: info.0, shade: info.1, title: mode.title, subtitle: info.2) {
             HStack(spacing: 6) {
@@ -204,7 +203,7 @@ struct SettingsView: View {
         return Button { withAnimation(.snappy(duration: 0.2)) { choose(k.rawValue, for: mode) } } label: {
             Text(k.glyph)
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(on ? Echoro.deep : .white.opacity(0.85))
+                .foregroundStyle(on ? Echoro.deep : Color.ink)
                 .frame(width: 34, height: 30)
                 .background {
                     if on {
@@ -228,7 +227,7 @@ struct SettingsView: View {
                 Button { withAnimation(.snappy(duration: 0.2)) { saveLocation = loc.rawValue } } label: {
                     Text(loc.short)
                         .font(.system(size: 11.5, weight: .semibold, design: .rounded))
-                        .foregroundStyle(on ? Echoro.deep : .white.opacity(0.85))
+                        .foregroundStyle(on ? Echoro.deep : Color.ink)
                         .padding(.horizontal, 11)
                         .frame(height: 26)
                         .background { if on { Capsule().fill(Echoro.mint) } }
@@ -261,7 +260,7 @@ struct SettingsView: View {
             Spacer()
             Text(Credits.line)
                 .font(.system(size: 11, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(Color.inkSecondary)
         }
         .padding(.horizontal, 4)
     }

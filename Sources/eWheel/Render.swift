@@ -56,12 +56,12 @@ private func hex(_ v: UInt32, _ a: Double = 1) -> Color {
 private struct Wallpaper: View {
     var body: some View {
         ZStack {
-            LinearGradient(colors: [hex(0x06150D), hex(0x123524), hex(0x1E5238)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            LinearGradient(colors: [hex(0x111412), hex(0x123524), hex(0x2B4E3B)], startPoint: .topLeading, endPoint: .bottomTrailing)
             Circle().fill(hex(0xC5ECD2, 0.34)).frame(width: 640).blur(radius: 150).offset(x: -420, y: -230)
-            Circle().fill(hex(0x5E8C70, 0.60)).frame(width: 560).blur(radius: 120).offset(x: 440, y: 260)
-            Circle().fill(hex(0xC5ECD2, 0.26)).frame(width: 420).blur(radius: 90).offset(x: 180, y: -260)
-            Ellipse().fill(hex(0x2E6B4A, 0.7)).frame(width: 900, height: 240).blur(radius: 80).rotationEffect(.degrees(-18)).offset(x: -60, y: 250)
-            Ellipse().fill(hex(0xE6F7EC, 0.16)).frame(width: 520, height: 90).blur(radius: 30).rotationEffect(.degrees(-24)).offset(x: 120, y: -40)
+            Circle().fill(hex(0x2F6B57, 0.60)).frame(width: 560).blur(radius: 120).offset(x: 440, y: 260)
+            Circle().fill(hex(0xA9CFB7, 0.26)).frame(width: 420).blur(radius: 90).offset(x: 180, y: -260)
+            Ellipse().fill(hex(0x2B4E3B, 0.7)).frame(width: 900, height: 240).blur(radius: 80).rotationEffect(.degrees(-18)).offset(x: -60, y: 250)
+            Ellipse().fill(hex(0xC5ECD2, 0.16)).frame(width: 520, height: 90).blur(radius: 30).rotationEffect(.degrees(-24)).offset(x: 120, y: -40)
         }
         .frame(width: Render.size.width, height: Render.size.height)
         .clipped()
@@ -154,8 +154,8 @@ private struct DragGhost: View {
             ZStack {
                 LinearGradient(colors: [hex(0xBFE3F2), hex(0xE9F6EE)], startPoint: .top, endPoint: .bottom)
                 Circle().fill(hex(0xFFE9A8)).frame(width: 14).offset(x: 14, y: -10)
-                Ellipse().fill(hex(0x5E8C70)).frame(width: 90, height: 40).offset(x: -16, y: 20)
-                Ellipse().fill(hex(0x2E6B4A)).frame(width: 80, height: 36).offset(x: 22, y: 24)
+                Ellipse().fill(hex(0x2F6B57)).frame(width: 90, height: 40).offset(x: -16, y: 20)
+                Ellipse().fill(hex(0x2B4E3B)).frame(width: 80, height: 36).offset(x: 22, y: 24)
             }
             .frame(width: 64, height: 48)
             .clipShape(RoundedRectangle(cornerRadius: 4))
@@ -237,7 +237,7 @@ private struct MenuScene: View {
             }
             .padding(6)
             .frame(width: menu.width, height: menu.height, alignment: .topLeading)
-            .echoGlass(RoundedRectangle(cornerRadius: 14, style: .continuous), tint: hex(0x0B2117, 0.55))
+            .echoGlass(RoundedRectangle(cornerRadius: 14, style: .continuous), tint: hex(0x111412, 0.55))
             .padding(.leading, menu.minX).padding(.top, menu.minY)
             .environment(\.renderBackdrop, AnyView(Wallpaper()))
             Caption(title: "Menu bar", subtitle: "Always one click away: your keys, where files go, and Settings.")

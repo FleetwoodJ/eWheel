@@ -63,6 +63,14 @@ extension View {
     }
 }
 
+// Two dark-scheme tokens eWheel needs beyond the shared EchoroBrand kit ("Echoro brand colours").
+extension Color {
+    /// Secondary text: #C0C9C0 on dark, #404942 on light.
+    static let inkSecondary = Brand.dynamic(dark: Brand.hex(0xC0C9C0), light: Brand.hex(0x404942))
+    /// Divider: #404942 on dark, #C0C9C0 on light.
+    static let divider = Brand.dynamic(dark: Brand.hex(0x404942), light: Brand.hex(0xC0C9C0))
+}
+
 /// Liquid-Glass-style switch: glass track, white knob, mint when on.
 /// Drawn in SwiftUI so it renders in presentation images too.
 struct GlassSwitch: View {
@@ -91,7 +99,7 @@ struct GlassSwitch: View {
 /// Small rounded-square icon, like the ones in System Settings, in greens.
 struct IconChip: View {
     let symbol: String
-    var shade: Color = Echoro.sage
+    var shade: Color = Brand.color(Brand.forest)
 
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)

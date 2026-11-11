@@ -87,7 +87,7 @@ struct WheelView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
-                .foregroundStyle(on ? Echoro.deep : .white.opacity(0.95))
+                .foregroundStyle(on ? Echoro.deep : Color.ink)
                 .shadow(color: .black.opacity(on ? 0 : 0.35), radius: 2, y: 1)
                 .frame(width: 76)
                 .offset(x: n == 1 ? 0 : cos(a) * r, y: n == 1 ? -r : sin(a) * r)
@@ -118,11 +118,11 @@ struct WheelView: View {
                     .font(.system(size: 9.5, weight: .bold, design: .rounded)).tracking(1)
                 Text(model.subject)
                     .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.65))
+                    .foregroundStyle(Color.inkSecondary)
                     .lineLimit(1).truncationMode(.middle)
             }
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(Color.ink)
         .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
         .frame(width: Geo.inner * 2 - 26)
         .allowsHitTesting(false)
@@ -137,7 +137,7 @@ struct WheelView: View {
                     Text(mode.key).font(.system(size: 13.5, weight: .bold, design: .rounded))
                     Text(mode.title).font(.system(size: 12, weight: .semibold, design: .rounded))
                 }
-                .foregroundStyle(on ? Echoro.deep : .white.opacity(0.9))
+                .foregroundStyle(on ? Echoro.deep : Color.ink)
                 .frame(width: 112, height: 32)
                 .background {
                     if on { Capsule().fill(Echoro.mint).shadow(color: .black.opacity(0.2), radius: 3, y: 1) }
@@ -200,21 +200,24 @@ struct ToastView: View {
     let detail: String
     let symbol: String
 
+    /// Failures use the brand error colours (error container #93000A, error #FFB4AB).
+    private var isError: Bool { symbol.hasPrefix("exclamationmark") }
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: symbol)
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(Echoro.deep)
+                .foregroundStyle(isError ? Brand.color(Brand.dError) : Echoro.deep)
                 .frame(width: 34, height: 34)
-                .background(Circle().fill(Echoro.mint))
+                .background(Circle().fill(isError ? Brand.color(0x93000A) : Echoro.mint))
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.ink)
                     .lineLimit(2)
                 Text(detail)
                     .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(Color.inkSecondary)
                     .lineLimit(3)
             }
             .frame(maxWidth: 320, alignment: .leading)
